@@ -211,7 +211,5 @@ def visualize(node_mask, edge_mask):
     plt.show()
 
 
-
-
 # Visualize the graph with the node and edge masks
 visualize(node_mask, edge_mask)
