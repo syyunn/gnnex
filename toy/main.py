@@ -19,6 +19,7 @@ data = dataset[0]
 
 # Set data.x to the one-hot encoded node labels
 data.x = F.one_hot(data.y).to(torch.float)
+print("data.x: ", data.x)
 
 # get number of classes
 num_classes = dataset.num_classes
@@ -41,17 +42,22 @@ print("dataset.num_features: ", dataset.num_features)
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GCNConv(data.x.size(1), 16)
+        self.conv1 = GCNConv(data.x.size(1), 16) # 16 is node-representation size (hidden size)
         self.conv2 = GCNConv(16, 16)
 
     def forward(self, x, edge_index):
         x = F.relu(self.conv1(x, edge_index))
+        print(x.shape)
         x = F.dropout(x, training=self.training)
         x = self.conv2(x, edge_index)
+        print(x.shape)
         return x
 
     def decode(self, z, pos_edge_index, neg_edge_index):
+        print(pos_edge_index.shape)
+        print(neg_edge_index.shape)
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1)
+        print("edge_index: ", edge_index.shape)
         logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)
         return logits
 
@@ -142,6 +148,8 @@ class_shape_map = {
     3: "D"   # Diamond
 }
 
+from matplotlib.colors import LinearSegmentedColormap
+
 def visualize(node_mask, edge_mask):
     G = to_networkx(data, to_undirected=True)
     pos = nx.kamada_kawai_layout(G)
@@ -156,7 +164,8 @@ def visualize(node_mask, edge_mask):
     edge_widths = [10 if edge == (edge_index_to_explain_src, edge_index_to_explain_dst) or edge == (edge_index_to_explain_dst, edge_index_to_explain_src) else 1 for edge in G.edges()]
 
     # Normalize the node and edge mask values
-    node_mask_normalized = (node_mask - node_mask.min() + 0.01) / (node_mask.max() - node_mask.min() + 0.01)
+    node_mask_normalized = (node_mask - node_mask.min() + 0.1) / (node_mask.max() - node_mask.min() + 0.1)
+    print("node_mask_normalized: ", node_mask_normalized)
     edge_colors_normalized = (np.array(edge_colors) - min(edge_colors)) / (max(edge_colors) - min(edge_colors))
 
     # Create custom color maps for nodes and edges
@@ -166,11 +175,24 @@ def visualize(node_mask, edge_mask):
     plt.figure(figsize=(16, 10))
     nx.draw_networkx_edges(G, pos, edge_color=cmap_edges(edge_colors_normalized), alpha=0.8, width=edge_widths)
 
+    # Calculate node colors for all nodes
+    all_node_colors = cmap_nodes(node_mask_normalized)
+
+    # Find the closest index to node_mask_normalized[0] in node_mask_normalized (excluding the first element itself)
+    first_val = node_mask_normalized[0]
+    rest_vals = node_mask_normalized[1:]
+    closest_index = torch.argmin(torch.abs(rest_vals - first_val)) + 1  # Add 1 to account for the excluded first element
+
+    # Impute all_node_colors[0] with all_node_colors[MOST_CLOSE_VAL]
+    all_node_colors[0] = all_node_colors[closest_index]
+
     # In the visualize function, replace the single nx.draw call with the following loop:
     for class_label in unique_class_labels(class_labels):
         nodes = nodes_of_class(class_labels, class_label)
+        node_colors = all_node_colors[nodes] 
+        print("node_colors: ", node_colors)
         node_shape = class_shape_map[class_label]
-        nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_size=300, node_color=cmap_nodes(node_mask_normalized[nodes]), node_shape=node_shape, alpha=0.8)
+        nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_size=300, node_color=node_colors, node_shape=node_shape, alpha=0.8)
 
     nx.draw_networkx_labels(G, pos, labels=node_map, font_size=10)
 
