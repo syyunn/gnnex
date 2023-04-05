@@ -2,12 +2,11 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 
-num_features = 4
 # Add an inner product decoder to the existing model
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GCNConv(num_features, 16)
+        self.conv1 = GCNConv(dataset.num_features, 16)
         self.conv2 = GCNConv(16, 16)
 
     def forward(self, x, edge_index):
