@@ -13,19 +13,14 @@ unique_committees = loaded_data["unique_committees"]
 unique_bills = loaded_data["unique_bills"]
 unique_naics = loaded_data["unique_naics"]
 
-
-print("Data has been loaded from the pickle file.")
-print(data)
-
 import torch
 
 # Check if a GPU is available and use it, otherwise use the CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print("Using {} device".format(device))
 
 from torch import Tensor
-
 from torch_geometric.data import HeteroData
-
 from typing import List
 
 # Assign consecutive indices to each node type
@@ -43,7 +38,7 @@ print(data)
 for edge_type, edge_index in data.edge_index_dict.items():
     data.edge_index_dict[edge_type] = edge_index.to(torch.long)
     
-data = data.to(device)
+# data = data.to(device)
 
 import torch_geometric.transforms as T
 
@@ -78,8 +73,9 @@ from torch_geometric.loader import LinkNeighborLoader
 
 # Define seed edges:
 edge_label_index = train_data["congressperson", "buy-sell", "ticker"].edge_label_index
-print(edge_label_index)
+print("edge_label_index", edge_label_index)
 edge_label = train_data["congressperson", "buy-sell", "ticker"].edge_label
+print("edge_label", edge_label)
 
 train_loader = LinkNeighborLoader(
     data=train_data,
@@ -91,114 +87,44 @@ train_loader = LinkNeighborLoader(
     shuffle=True,
 )
 
-import torch
-import torch.nn.functional as F
-from torch_geometric.nn import GINConv, MetaLayer, global_add_pool
-from torch_geometric.nn import SAGEConv, to_hetero
-from typing import Dict
+# Define the model
+from model import CustomGNN
 
+# Given the HeteroData object named 'data'
+num_nodes_dict = {node_type: data[node_type].num_nodes for node_type in data.node_types}
 
-from torch_geometric.nn import SAGEConv, to_hetero
-import torch.nn.functional as F
+# Print the num_nodes_dict
+print(num_nodes_dict)
 
-class GNN(torch.nn.Module):
-    def __init__(self, hidden_channels):
-        super().__init__()
-        self.conv1 = SAGEConv(hidden_channels, hidden_channels)
-        self.conv2 = SAGEConv(hidden_channels, hidden_channels)
-    def forward(self, x_dict: Dict[str, Tensor], edge_index_dict: Dict[str, Tensor]) -> Dict[str, Tensor]:
-        x_dict_new = {}
-        for edge_type_key in data.edge_types:
-            src_key, edge_index_key, dst_key = edge_type_key
-            x_src = x_dict[src_key]
-            
-            # Get the correct edge_index for the current edge type
-            edge_index = edge_index_dict[edge_type_key]
-            
-            # Use only x_src and edge_index as inputs to SAGEConv
-            x_dst_new = F.relu(self.conv1(x_src, edge_index))
-            x_dst_new = self.conv2(x_src, edge_index)
-            x_dict_new[dst_key] = x_dst_new
-        return x_dict_new
+# Instantiate the model
+model = CustomGNN(num_nodes_dict=num_nodes_dict, embedding_dim=64, edge_dim=32, num_edge_features=1, out_channels=64)
 
+# Define the loss and optimizer
+criterion = torch.nn.BCELoss()
+optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-class Classifier(torch.nn.Module):
-    def forward(self, x_congressperson, x_ticker, edge_label_index):
-        edge_feat_congressperson = x_congressperson[edge_label_index[0]]
-        edge_feat_ticker = x_ticker[edge_label_index[1]]
-        return (edge_feat_congressperson * edge_feat_ticker).sum(dim=-1)
-
-class Model(torch.nn.Module):
-    def __init__(self, data: HeteroData, hidden_channels: int):
-        super().__init__()
-        self.congressperson_emb = torch.nn.Embedding(data['congressperson'].num_nodes, hidden_channels)
-        self.ticker_emb = torch.nn.Embedding(data['ticker'].num_nodes, hidden_channels)
-        self.gnn = GNN(hidden_channels)
-        self.classifier = Classifier()
-
-    def forward(self, data: HeteroData) -> Tensor:
-        x_congressperson = self.congressperson_emb(data['congressperson'].node_id)
-        x_ticker = self.ticker_emb(data['ticker'].node_id)
-        x_dict = {'congressperson': x_congressperson, 'ticker': x_ticker}
-        x_dict = self.gnn(x_dict, data.edge_index_dict)
-        pred = self.classifier(x_dict['congressperson'], x_dict['ticker'],
-                               data['congressperson', 'buy-sell', 'ticker'].edge_label_index)
-        return pred
-
-model = Model(data, hidden_channels=64)
-model = model.to(device)
-
-
-import torch.optim as optim
-from sklearn.metrics import roc_auc_score
-
-# Define the loss function and optimizer
-criterion = torch.nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.01)
-
-# Number of training epochs
-num_epochs = 10
-
-# Training loop
+# Train the model
+model.train()
 for epoch in range(num_epochs):
-    model.train()
     total_loss = 0
-    total_examples = 0
     for batch in train_loader:
-        # Move batch to the appropriate device
         batch = batch.to(device)
-
-        # Print data type of all edge index tensors
-        for edge_type, edge_index in data.edge_index_dict.items():
-            print(f"Data type of edge_index for edge type {edge_type}: {edge_index.dtype}")
-
-        
-        # Forward pass
-        link_logits = model(batch)
-        link_labels = batch.edge_label.float()
-        
-        # Compute loss
-        loss = criterion(link_logits, link_labels)
-        
-        # Backward pass
         optimizer.zero_grad()
+
+        # Extract node IDs for all node types
+        x_dict = {key: batch[key].node_id for key in data.node_types}
+
+        preds = model(x_dict, batch.edge_index_dict, batch.edge_attr_dict, batch["congressperson", "buy-sell", "ticker"].edge_label_index)
+        labels = batch["congressperson", "buy-sell", "ticker"].edge_label
+
+        loss = criterion(preds, labels)
+
+        # Update the model parameters
         loss.backward()
         optimizer.step()
-        
-        # Update loss and example count
-        total_loss += loss.item() * batch.num_edges
-        total_examples += batch.num_edges
 
-    # Compute average loss
-    avg_loss = total_loss / total_examples
+        total_loss += loss.item()
 
-    # Evaluate model on validation set
-    model.eval()
-    with torch.no_grad():
-        val_logits = model(val_data).squeeze()
-        val_labels = val_data.edge_label.float()
-        auc = roc_auc_score(val_labels.cpu(), val_logits.cpu())
-
-    print(f'Epoch: {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}, AUC: {auc:.4f}')
-
-print('Training complete.')
+    # Print the average loss for this epoch
+    avg_loss = total_loss / len(train_loader)
+    print(f"Epoch: {epoch + 1}, Loss: {avg_loss:.4f}")
