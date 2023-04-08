@@ -1,14 +1,13 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import NNConv, MessagePassing
-from torch_geometric.nn import global_mean_pool as gap
-from torch_geometric.nn import global_max_pool as gmp
+# from torch_geometric.nn import NNConv
+from torch_geometric.nn import HeteroConv
+from debug import NNConv
 
-# model = CustomGNN(num_nodes_dict=num_nodes_dict, embedding_dim=64, edge_dim=32, num_edge_features=1, out_channels=64)
-class CustomGNN(torch.nn.Module):
-    def __init__(self, num_nodes_dict, embedding_dim, edge_dim, num_edge_features, out_channels):
-        super(CustomGNN, self).__init__()
+class HeteroGNN(torch.nn.Module):
+    def __init__(self, num_nodes_dict, embedding_dim, num_edge_features, out_channels, edge_types, num_layers=2):
+        super(HeteroGNN, self).__init__()
 
         # Separate embeddings for different node types
         self.embeddings = torch.nn.ModuleDict({
@@ -16,50 +15,62 @@ class CustomGNN(torch.nn.Module):
             for node_type, num_nodes in num_nodes_dict.items()
         })
 
-        # Node-type-specific weight matrices
-        self.node_transforms = torch.nn.ModuleDict({
-            node_type: torch.nn.Linear(embedding_dim, embedding_dim)
-            for node_type in num_nodes_dict.keys()
-        })
+        # Define separate NNs for each edge type
+        nn_dict = { 
+            edge_type: nn.Sequential(
+                nn.Linear(num_edge_features, embedding_dim),
+                nn.ReLU(),
+                nn.Linear(embedding_dim, embedding_dim*out_channels)
+            )
+            for edge_type in edge_types
+        }
 
-        # Define the NN for NNConv
-        nn_layer = nn.Sequential(
-            nn.Linear(num_edge_features, embedding_dim * out_channels),
-            nn.ReLU(),
-            nn.Linear(embedding_dim * out_channels, embedding_dim * out_channels)
-        )
+        # Define separate NNConv layers for each edge type
+        self.convs = nn.ModuleList([
+            HeteroConv({
+                edge_type: NNConv(embedding_dim, out_channels, nn_dict[edge_type], aggr='mean')
+                for edge_type in edge_types
+            })
+            for _ in range(num_layers)
+        ])
 
-        # Define NNConv layer
-        self.conv = NNConv(embedding_dim, out_channels, nn_layer, aggr='mean')
-
-        # Output layer
-        self.output_layer = nn.Linear(embedding_dim, 1)
-
-    def forward(self, x_dict, edge_index, edge_attr):
-        # Apply separate embeddings and node-type-specific weight matrices
-        x_dict = {node_type: self.node_transforms[node_type](self.embeddings[node_type](x))
+    def forward(self, x_dict, edge_index_dict, edge_attr_dict):
+        # Apply separate embeddings
+        x_dict = {node_type: self.embeddings[node_type](x)
                   for node_type, x in x_dict.items()}
 
-        # Concatenate node embeddings
-        x = torch.cat(list(x_dict.values()), dim=0)
+        # Apply HeteroConv layers
+        for conv in self.convs:
+            x_dict = conv(x_dict, edge_index_dict, edge_attr_dict)
+            x_dict = {key: F.relu(x) for key, x in x_dict.items()}
 
-        # Apply NNConv
-        x = self.conv(x, edge_index, edge_attr)
-        x = F.relu(x)
+        return x_dict
 
-        # Output layer
-        out = self.output_layer(x)
-        return out
+# model = BuySellLinkPrediction(num_nodes_dict, embedding_dim=64, num_edge_features=2, out_channels=32).to(device)
+class BuySellLinkPrediction(torch.nn.Module):
+    def __init__(self, num_nodes_dict, embedding_dim, num_edge_features, out_channels, edge_types, num_layers):
+        super(BuySellLinkPrediction, self).__init__()
+        self.gnn = HeteroGNN(num_nodes_dict, embedding_dim, num_edge_features, out_channels, edge_types, num_layers=num_layers)
+        self.linear = torch.nn.Linear(2 * embedding_dim, 1)  # Linear layer for concatenated embeddings
+        self.sigmoid = torch.nn.Sigmoid()
 
-# Define the number of nodes for each node type
-num_nodes_dict = {'congressperson': 2431, 'committee': 556, 'ticker': 4202, 'bill': 47767, 'naics': 744}
+    # # Forward pass
+    # preds = model(x_dict, batch.edge_index_dict, batch.edge_attr_dict, edge_label_index, edge_label)
 
-# Instantiate the model
-model = CustomGNN(num_nodes_dict=num_nodes_dict, embedding_dim=64, edge_dim=32, num_edge_features=1, out_channels=64)
 
-# Forward pass (example)
-x_dict = {'congressperson': torch.randint(2431, (10,)), 'committee': torch.randint(556, (10,))}
-edge_index = torch.randint(10, (2, 20))
-edge_attr = torch.rand(20, 1)
-output = model(x_dict, edge_index, edge_attr)
-print(output.shape)
+    def forward(self, x_dict, edge_index_dict, edge_attr_dict, edge_label_index):
+        # Get embeddings from GNN
+        out = self.gnn(x_dict, edge_index_dict, edge_attr_dict)
+        
+        # Extract embeddings for 'congressperson' and 'ticker' node types
+        congressperson_emb = out['congressperson']
+        ticker_emb = out['ticker']
+        
+        # Concatenate embeddings of source and target nodes
+        concatenated_emb = torch.cat([congressperson_emb[edge_label_index[0]], ticker_emb[edge_label_index[1]]], dim=-1)
+        
+        # Compute predictions using linear layer and sigmoid activation
+        preds = self.linear(concatenated_emb)
+        preds = self.sigmoid(preds).squeeze()
+        
+        return preds

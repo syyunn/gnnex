@@ -1,4 +1,5 @@
 import pickle
+from tqdm import tqdm
 
 
 # Open the file in binary read mode and unpickle the data
@@ -34,9 +35,12 @@ data['naics'].node_id = torch.arange(len(unique_naics))
 print("Node IDs have been assigned to each node type.")
 print(data)
 
+# Collect edge_types 
+edge_types = []
 # Convert edge_index tensors to integer type (torch.long)
 for edge_type, edge_index in data.edge_index_dict.items():
     data.edge_index_dict[edge_type] = edge_index.to(torch.long)
+    edge_types.append(edge_type)
     
 # data = data.to(device)
 
@@ -55,7 +59,7 @@ transform = T.RandomLinkSplit(
     num_test=0.1,
     disjoint_train_ratio=0.3,
     neg_sampling_ratio=2.0,
-    add_negative_train_samples=False,
+    add_negative_train_samples=True,
     edge_types=("congressperson", "buy-sell", "ticker"),
     rev_edge_types=("ticker", "rev_buy-sell", "congressperson"), 
 )
@@ -77,18 +81,39 @@ print("edge_label_index", edge_label_index)
 edge_label = train_data["congressperson", "buy-sell", "ticker"].edge_label
 print("edge_label", edge_label)
 
+num_neigbors = [500, 250]
+batch_size = 128
+
 train_loader = LinkNeighborLoader(
     data=train_data,
-    num_neighbors=[20, 10],
+    num_neighbors=num_neigbors,
     neg_sampling_ratio=2.0,
     edge_label_index=(("congressperson", "buy-sell", "ticker"), edge_label_index),
     edge_label=edge_label,
-    batch_size=128,
+    batch_size=batch_size,
     shuffle=True,
 )
 
+# Define seed edges for the test dataset:
+test_edge_label_index = test_data["congressperson", "buy-sell", "ticker"].edge_label_index
+test_edge_label = test_data["congressperson", "buy-sell", "ticker"].edge_label
+
+print("test_edge_label_index", test_edge_label_index)
+print("test_edge_label", test_edge_label)
+
+# Create the test loader:
+test_loader = LinkNeighborLoader(
+    data=test_data,
+    num_neighbors=num_neigbors,  # Same number of neighbors as in the training loader
+    neg_sampling_ratio=2.0,  # Same negative sampling ratio as in the training loader
+    edge_label_index=(("congressperson", "buy-sell", "ticker"), test_edge_label_index),
+    edge_label=test_edge_label,
+    batch_size=batch_size,  # Same batch size as in the training loader
+    shuffle=False,  # No need to shuffle the test dataset
+)
+
 # Define the model
-from model import CustomGNN
+from model import BuySellLinkPrediction
 
 # Given the HeteroData object named 'data'
 num_nodes_dict = {node_type: data[node_type].num_nodes for node_type in data.node_types}
@@ -97,34 +122,68 @@ num_nodes_dict = {node_type: data[node_type].num_nodes for node_type in data.nod
 print(num_nodes_dict)
 
 # Instantiate the model
-model = CustomGNN(num_nodes_dict=num_nodes_dict, embedding_dim=64, edge_dim=32, num_edge_features=1, out_channels=64)
+num_layers = 2
+model = BuySellLinkPrediction(num_nodes_dict, embedding_dim=64, num_edge_features=2, out_channels=64, edge_types=edge_types, num_layers=num_layers).to(device)
 
-# Define the loss and optimizer
-criterion = torch.nn.BCELoss()
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+# Training loop
+import torch.optim as optim
+from torch.nn import functional as F
 
-# Train the model
-model.train()
-for epoch in range(num_epochs):
+from sklearn.metrics import accuracy_score
+
+from torch.optim.lr_scheduler import StepLR
+
+epochs = 100
+optimizer = optim.Adam(model.parameters(), lr=0.01)  # You can set the learning rate (lr) as needed
+
+# Define the learning rate scheduler
+scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # Decay the learning rate by a factor of 0.1 every 10 epochs
+
+for epoch in range(epochs):
+    model.train()
     total_loss = 0
-    for batch in train_loader:
-        batch = batch.to(device)
+    total_accuracy = 0
+    for batch in tqdm(train_loader):
+        batch = batch.to(device) # Move the batch to the device
+
         optimizer.zero_grad()
+        
+        # Get node embeddings from the batch
+        x_dict = {node_type: batch[node_type].node_id for node_type in num_nodes_dict.keys()}
+        
+        # Get edge_label_index and edge_label
+        edge_label_index = batch[("congressperson", "buy-sell", "ticker")].edge_label_index
+        edge_label = batch[("congressperson", "buy-sell", "ticker")].edge_label
+        
+        # Forward pass
+        preds = model(x_dict, batch.edge_index_dict, batch.edge_attr_dict, edge_label_index)
+        
+        # Compute loss
+        loss = F.binary_cross_entropy(preds, edge_label.float())
+        total_loss += loss.item()
 
-        # Extract node IDs for all node types
-        x_dict = {key: batch[key].node_id for key in data.node_types}
-
-        preds = model(x_dict, batch.edge_index_dict, batch.edge_attr_dict, batch["congressperson", "buy-sell", "ticker"].edge_label_index)
-        labels = batch["congressperson", "buy-sell", "ticker"].edge_label
-
-        loss = criterion(preds, labels)
-
-        # Update the model parameters
+         # Convert predicted probabilities to binary predictions
+        binary_preds = (preds > 0.5).float()
+        
+        # Compute accuracy
+        accuracy = accuracy_score(edge_label.cpu().numpy(), binary_preds.cpu().numpy())
+        total_accuracy += accuracy
+        
+        # Backward pass
         loss.backward()
         optimizer.step()
 
-        total_loss += loss.item()
+    # Update the learning rate using the scheduler
+    scheduler.step()
 
-    # Print the average loss for this epoch
+    # Print loss
+    # Print loss and accuracy
     avg_loss = total_loss / len(train_loader)
-    print(f"Epoch: {epoch + 1}, Loss: {avg_loss:.4f}")
+    avg_accuracy = total_accuracy / len(train_loader)
+    print(f"Epoch [{epoch+1}/{epochs}] Loss: {avg_loss:.4f} Train Accuracy: {avg_accuracy:.4f}")
+
+    # eval
+    # Evaluate the model on the test dataset
+    from util import evaluate
+    test_loss, test_accuracy = evaluate(test_loader, model, device, num_nodes_dict)
+    print(f"Test Loss: {test_loss:.4f} Test Accuracy: {test_accuracy:.4f}")
