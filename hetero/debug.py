@@ -107,6 +107,9 @@ class NNConv(MessagePassing):
         if self.bias is not None:
             out = out + self.bias
 
+        # print(out.shape)
+        # print(out)
+
         return out
 
     def message(self, x_j: Tensor, edge_attr: Tensor) -> Tensor:
