@@ -3,11 +3,21 @@ from tqdm import tqdm
 
 import numpy as np
 
-# from util import CustomLinkNeighborLoader
+import random
+
+# Set the random seed for reproducibility
+seed = 17806
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 # Open the file in binary read mode and unpickle the data
-# with open('/home/gridsan/syun/gnnex/data/hetero_graph_data.pkl', "rb") as f:
-with open('./data/hetero_graph_data.pkl', "rb") as f:
+with open('/home/gridsan/syun/gnnex/data/hetero_graph_data.pkl', "rb") as f:
+# with open('./data/hetero_graph_data.pkl', "rb") as f:
     loaded_data = pickle.load(f)
 
 # Extract the data from the loaded dictionary
@@ -45,8 +55,6 @@ for edge_type, edge_index in data.edge_index_dict.items():
 
 print("Edge types:", edge_types)
 print(len(edge_types))
-    
-# data = data.to(device)
 
 import torch_geometric.transforms as T
 
@@ -61,7 +69,7 @@ import torch_geometric.transforms as T
 transform = T.RandomLinkSplit(
     num_val=0,
     num_test=0.1,
-    disjoint_train_ratio=0.3,
+    disjoint_train_ratio=0.3, # Across the training edges, we use 70% of edges for message passing, and 30% of edges for supervision.
     neg_sampling_ratio=1.0,
     add_negative_train_samples=True,
     edge_types=("congressperson", "buy-sell", "ticker"),
@@ -74,11 +82,6 @@ transformed_edge_label = train_data["congressperson", "buy-sell", "ticker"].edge
 
 # split the data into train and test
 
-# In the first hop, we sample at most 20 neighbors.
-# In the second hop, we sample at most 10 neighbors.
-# In addition, during training, we want to sample negative edges on-the-fly with
-# a ratio of 2:1.
-# We can make use of the `loader.LinkNeighborLoader` from PyG:
 from torch_geometric.loader import LinkNeighborLoader
 
 #   Define seed edges:
@@ -88,6 +91,13 @@ edge_attr = train_data["congressperson", "buy-sell", "ticker"].edge_attr
 
 # Create a dictionary to map edge indices to their attributes
 edge_to_attr = {(src.item(), dst.item()): attr.to(device) for src, dst, attr in zip(*edge_label_index, edge_attr)}
+
+
+# In the first hop, we sample at most 20 neighbors.
+# In the second hop, we sample at most 10 neighbors.
+# In addition, during training, we want to sample negative edges on-the-fly with
+# a ratio of 2:1.
+# We can make use of the `loader.LinkNeighborLoader` from PyG:
 
 num_neigbors = [20, 10, 5]
 batch_size = 128
@@ -116,7 +126,6 @@ test_edge_to_attr = {(src.item(), dst.item()): attr.to(device) for src, dst, att
 # Create the test loader:
 test_loader = LinkNeighborLoader(
     data=test_data,
-    # neg_sampling=('binary', 2.0),
     num_neighbors=num_neigbors,  # Same number of neighbors as in the training loader
     edge_label_index=(("congressperson", "buy-sell", "ticker"), test_edge_label_index),
     edge_label=test_edge_label,
@@ -240,3 +249,6 @@ for epoch in range(epochs):
     from util import evaluate
     test_loss, test_accuracy, test_auc_roc = evaluate(test_loader, model, device, num_nodes_dict, test_data, test_edge_to_attr)
     print(f"Test Loss: {test_loss:.4f} Test Accuracy: {test_accuracy:.4f} Test AUC-ROC: {test_auc_roc:.4f}")
+
+# Save the model after the training loop
+torch.save(model.state_dict(), "buysell_link_prediction_model.pt")
