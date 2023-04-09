@@ -164,6 +164,9 @@ optimizer = optim.Adam(model.parameters(), lr=0.005)  # You can set the learning
 # Define the learning rate scheduler
 scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # Decay the learning rate by a factor of 0.1 every 10 epochs
 
+# Initialize a variable to keep track of the best test AUC-ROC score
+best_test_auc_roc = 0.0
+
 for epoch in range(epochs):
     model.train()
     total_loss = 0
@@ -252,5 +255,10 @@ for epoch in range(epochs):
     test_loss, test_accuracy, test_auc_roc = evaluate(test_loader, model, device, num_nodes_dict, test_data, test_edge_to_attr)
     print(f"Test Loss: {test_loss:.4f} Test Accuracy: {test_accuracy:.4f} Test AUC-ROC: {test_auc_roc:.4f}")
 
-# Save the model after the training loop
-torch.save(model.state_dict(), "buysell_link_prediction_model.pt")
+    # Check if the current test AUC-ROC score is better than the best one seen so far
+    if test_auc_roc > best_test_auc_roc:
+        # Update the best test AUC-ROC score
+        best_test_auc_roc = test_auc_roc
+        # Save the model with the best test AUC-ROC score
+        torch.save(model.state_dict(), "buysell_link_prediction_best_model.pt")
+        print("Model saved with best test AUC-ROC:", best_test_auc_roc)
