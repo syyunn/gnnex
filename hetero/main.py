@@ -5,6 +5,8 @@ import numpy as np
 
 import random
 
+import torch
+
 # Set the random seed for reproducibility
 seed = 17806
 random.seed(seed)
