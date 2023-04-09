@@ -94,7 +94,7 @@ for epoch in range(1000):
     loss = train()
     print(f"Epoch: {epoch+1}, Loss: {loss:.4f}")
 
-explainer = GNNExplainer_(model=model, epochs=200)
+explainer = GNNExplainer_(model=model, epochs=200) # simple init of the class.
 edge_index_to_explain_src = 0
 edge_index_to_explain_dst = 2
 edge_index_to_explain = torch.tensor([[edge_index_to_explain_src], [edge_index_to_explain_dst]], dtype=torch.long).to(device)
