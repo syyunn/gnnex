@@ -23,6 +23,7 @@ print("data.x: ", data.x)
 
 # get number of classes
 num_classes = dataset.num_classes
+print("num_classes: ", num_classes)
 
 # Set data.y to None
 data.train_mask = data.val_mask = data.test_mask = data.y = None
@@ -47,17 +48,17 @@ class Net(torch.nn.Module):
 
     def forward(self, x, edge_index):
         x = F.relu(self.conv1(x, edge_index))
-        print(x.shape)
+        # print(x.shape)
         x = F.dropout(x, training=self.training)
         x = self.conv2(x, edge_index)
-        print(x.shape)
+        # print(x.shape)
         return x
 
     def decode(self, z, pos_edge_index, neg_edge_index):
-        print(pos_edge_index.shape)
-        print(neg_edge_index.shape)
+        # print(pos_edge_index.shape)
+        # print(neg_edge_index.shape)
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1)
-        print("edge_index: ", edge_index.shape)
+        # print("edge_index: ", edge_index.shape)
         logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)
         return logits
 
@@ -93,7 +94,7 @@ for epoch in range(1000):
     loss = train()
     print(f"Epoch: {epoch+1}, Loss: {loss:.4f}")
 
-explainer = GNNExplainer_(model=model, epochs=500)
+explainer = GNNExplainer_(model=model, epochs=200)
 edge_index_to_explain_src = 0
 edge_index_to_explain_dst = 2
 edge_index_to_explain = torch.tensor([[edge_index_to_explain_src], [edge_index_to_explain_dst]], dtype=torch.long).to(device)
@@ -103,7 +104,7 @@ edge_index_to_explain_undirected = None
 for i in range(data.edge_index.size(1)):
     src, dst = data.edge_index[0][i], data.edge_index[1][i]
     if (src == edge_index_to_explain_src and dst == edge_index_to_explain_dst) or (src == edge_index_to_explain_dst and dst == edge_index_to_explain_src):
-        print("i: ", i)
+        # print("i: ", i)
         edge_index_to_explain_undirected = torch.tensor([[src], [dst]], dtype=torch.long).to(device)
         break
 print("edge_index_to_explain_undirected: ", edge_index_to_explain_undirected)
@@ -165,7 +166,7 @@ def visualize(node_mask, edge_mask):
 
     # Normalize the node and edge mask values
     node_mask_normalized = (node_mask - node_mask.min() + 0.1) / (node_mask.max() - node_mask.min() + 0.1)
-    print("node_mask_normalized: ", node_mask_normalized)
+    # print("node_mask_normalized: ", node_mask_normalized)
     edge_colors_normalized = (np.array(edge_colors) - min(edge_colors)) / (max(edge_colors) - min(edge_colors))
 
     # Create custom color maps for nodes and edges
@@ -190,7 +191,7 @@ def visualize(node_mask, edge_mask):
     for class_label in unique_class_labels(class_labels):
         nodes = nodes_of_class(class_labels, class_label)
         node_colors = all_node_colors[nodes] 
-        print("node_colors: ", node_colors)
+        # print("node_colors: ", node_colors)
         node_shape = class_shape_map[class_label]
         nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_size=300, node_color=node_colors, node_shape=node_shape, alpha=0.8)
 
