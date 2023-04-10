@@ -145,7 +145,7 @@ model_no_embedding.load_state_dict(state_dict_no_embeddings)
 
 
 # Instantiate the HeteroGNNExplainer
-explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=0.01, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr)
+explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=1, lr=0.01, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr)
 
 # Prepare the edge of interest
 which_edge = 0
@@ -165,4 +165,6 @@ node_masks, edge_masks = explainer(
 )
 
 print("Node masks:", node_masks)
+print("Node masks:", node_masks.shape)
 print("Edge masks:", edge_masks)
+print("Edge masks:", edge_masks.shape)
