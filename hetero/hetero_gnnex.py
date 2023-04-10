@@ -152,6 +152,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
         optimizer = torch.optim.Adam(parameters, lr=self.lr)
 
         for i in range(self.epochs):
+            print("Epoch: ", i)
             optimizer.zero_grad()
 
             h_dict = {
@@ -174,6 +175,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
                 y_hat, y = y_hat[index], y[index]
 
             loss = self._loss(y_hat, y)
+            print("loss", loss)
 
             loss.backward()
             optimizer.step()
