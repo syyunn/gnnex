@@ -49,8 +49,9 @@ def evaluate(loader, model, device, num_nodes_dict, test_data, edge_to_attr):
             num_positives = torch.sum(edge_label == 1).item()
 
             # Print the counts
-            # print(f"Number of negative samples (label 0): {num_negatives}")
-            # print(f"Number of positive samples (label 1): {num_positives}")
+            print("This is Test session")
+            print(f"Number of negative samples (label 0): {num_negatives}")
+            print(f"Number of positive samples (label 1): {num_positives}")
 
             from util import get_edge_attr_for_batch
             batch_edge_label_attr = get_edge_attr_for_batch(test_data["congressperson", "buy-sell", "ticker"].edge_index, test_data["congressperson", "buy-sell", "ticker"].edge_attr, edge_label_index, edge_to_attr)

@@ -196,8 +196,8 @@ for epoch in range(epochs):
         num_positives = torch.sum(edge_label == 1).item()
 
         # # Print the counts
-        # print(f"Number of negative samples (label 0): {num_negatives}")
-        # print(f"Number of positive samples (label 1): {num_positives}")
+        print(f"Number of negative samples (label 0): {num_negatives}")
+        print(f"Number of positive samples (label 1): {num_positives}")
         
         # print("batch.edge_attr_dict", batch.edge_attr_dict)
 
@@ -217,6 +217,13 @@ for epoch in range(epochs):
         # Forward pass
         preds = model(x_dict, batch.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=batch_edge_label_attr)
         # print("preds", preds)
+        # Assuming 'preds' is a tensor obtained from the model's output
+        num_ones = torch.sum(torch.eq(preds, 1)).item()
+        num_zeros = torch.sum(torch.eq(preds, 0)).item()
+
+        # Print the results
+        print(f"Number of ones in 'preds': {num_ones}")
+        print(f"Number of zeros in 'preds': {num_zeros}")
         
         # Compute loss
         loss = F.binary_cross_entropy(preds, edge_label.float())
