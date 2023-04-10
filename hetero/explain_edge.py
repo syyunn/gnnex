@@ -145,26 +145,28 @@ model_no_embedding.load_state_dict(state_dict_no_embeddings)
 
 
 # Instantiate the HeteroGNNExplainer
-explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=1, lr=0.01, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr)
+epochs = 100
+lr = 0.001
+explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=0.001, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr)
 
 # Prepare the edge of interest
-which_edge = 0
-congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
-
-edge_to_explain = torch.tensor([congressperson_id, ticker_id], device=device)  # Replace with your edge of interest
-edge_type_to_explain = ("congressperson", "buy-sell", "ticker")
+which_edges = [i for i in range(data[('congressperson', 'buy-sell', 'ticker')]['edge_index'].shape[1])]
+for which_edge in which_edges:
 
 
-# Run the explain_edge method
-node_masks, edge_masks = explainer(
-    model = model_no_embedding,
-    x_dict = embedding_dict,
-    edge_index_dict = data.edge_index_dict,
-    target = target,
-    index = None
-)
+    congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
 
-print("Node masks:", node_masks)
-print("Node masks:", node_masks.shape)
-print("Edge masks:", edge_masks)
-print("Edge masks:", edge_masks.shape)
+    edge_to_explain = torch.tensor([congressperson_id, ticker_id], device=device)  # Replace with your edge of interest
+    edge_type_to_explain = ("congressperson", "buy-sell", "ticker")
+
+    # Run the explain_edge method
+    node_masks, edge_masks = explainer(
+        model = model_no_embedding,
+        x_dict = embedding_dict,
+        edge_index_dict = data.edge_index_dict,
+        target = target,
+        index = None
+    )
+
+    print("Node masks:", node_masks)
+    print("Edge masks:", edge_masks)

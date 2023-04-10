@@ -206,7 +206,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
                 F = None # not implemnted
 
                 if node_mask_type == 'object':
-                    self.node_mask_dict[key] = Parameter(torch.randn(N, 1, device=device) * std)
+                    self.node_mask_dict[key] = Parameter(torch.randn(N, 1, device=device) * std) # we are using random initalization.
                 elif node_mask_type == MaskType.attributes:
                     self.node_mask_dict[key] = Parameter(torch.randn(N, F, device=device) * std)
                 elif node_mask_type == MaskType.common_attributes:
