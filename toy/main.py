@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from torch_geometric.datasets import KarateClub
 from torch_geometric.utils import to_undirected
 from torch_geometric.nn import GCNConv
+from torch_geometric.explain import Explainer, GNNExplainer, ModelConfig
 from explain import GNNExplainer_
 # from torch_geometric.explain.algorithm import GNNExplainer
 import networkx as nx

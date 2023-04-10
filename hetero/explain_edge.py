@@ -1,10 +1,15 @@
 import torch
+import torch_geometric.transforms as T
+from torch_geometric.data import HeteroData
+from hetero_gnnex import HeteroGNNExplainer
 from model import BuySellLinkPrediction
-from util import get_edge_attr_for_batch
+from model_no_embeddings import BuySellLinkPredictionNoEmbedding
+
 import pickle
 
-# Open the file in binary read mode and unpickle the data
-with open('./data/hetero_graph_data.pkl', "rb") as f:
+
+# Load your HeteroData object named 'data'
+with open("./data/hetero_graph_data.pkl", "rb") as f:
     loaded_data = pickle.load(f)
 
 # Extract the data from the loaded dictionary
@@ -14,6 +19,8 @@ unique_congresspeople = loaded_data["unique_congresspeople"]
 unique_committees = loaded_data["unique_committees"]
 unique_bills = loaded_data["unique_bills"]
 unique_naics = loaded_data["unique_naics"]
+
+import torch
 
 # Check if a GPU is available and use it, otherwise use the CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -29,19 +36,7 @@ data['naics'].node_id = torch.arange(len(unique_naics))
 # Print the updated data
 print("Node IDs have been assigned to each node type.")
 print(data)
-
-# Check if a GPU is available and use it, otherwise use the CPU
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print("Using {} device".format(device))
-
-# Given the HeteroData object named 'data'
-num_nodes_dict = {node_type: data[node_type].num_nodes for node_type in data.node_types}
-
-# Print the num_nodes_dict
-print(num_nodes_dict)
-
-# Instantiate the model
-num_layers = 2
+print(data.node_types)
 
 # Collect edge_types 
 edge_types = []
@@ -53,20 +48,37 @@ for edge_type, edge_index in data.edge_index_dict.items():
 print("Edge types:", edge_types)
 print(len(edge_types))
 
-model = BuySellLinkPrediction(num_nodes_dict, 
-                              embedding_dim=64, 
-                              num_edge_features=2, 
-                              out_channels=64, 
-                              edge_types=edge_types, 
-                              num_layers=num_layers).to(device)
+# Given the HeteroData object named 'data'
+num_nodes_dict = {node_type: data[node_type].num_nodes for node_type in data.node_types}
+# Print the num_nodes_dict
+print(num_nodes_dict)
 
-# Print the model architecture
-print(model)
+# Prepare data and model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+data = data.to(device)
 
-# Load the trained model
+# Define hyperparameters
+num_layers = 2
+embedding_dim = 64
+num_edge_features = 2
+out_channels = 64
+
+# Instantiate the model
+model = BuySellLinkPrediction(
+    num_nodes_dict,
+    embedding_dim=embedding_dim,
+    num_edge_features=num_edge_features,
+    out_channels=out_channels,
+    edge_types=edge_types,
+    num_layers=num_layers,
+).to(device)
+
+# Load the model state
 model_path = "buysell_link_prediction_best_model.pt"
-# model.load_state_dict(torch.load(model_path))
 model.load_state_dict(torch.load(model_path, map_location=device))
+
+### Get target as preds
+# Evaluate the model
 model.eval()
 
 which_edge = 0
@@ -82,10 +94,10 @@ for key, edge_index in data.edge_index_dict.items():
 
 # date scaling
 from datetime import date
+
 start_date = date(2016, 1, 1)
 today = date.today()
 total_days = (today - start_date).days
-scaled_edge_attr_dict = {key: value / total_days for key, value in data.edge_attr_dict.items()}
 
 # Create edge_label_attr tensor
 edge_attr = torch.tensor(edge_to_attr[(congressperson_id.item(), ticker_id.item())]/total_days, dtype=torch.float, device=device)
@@ -94,6 +106,8 @@ print("Edge label attribute:", edge_attr)
 x_dict = {node_type: data[node_type].node_id for node_type in num_nodes_dict.keys()}
 
 
+scaled_edge_attr_dict = {key: value / total_days for key, value in data.edge_attr_dict.items()}
+
 # Perform inference using the trained model
 with torch.no_grad():
     # preds = model(x_dict, batch.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=batch_edge_label_attr)
@@ -101,3 +115,54 @@ with torch.no_grad():
 
 # Print the prediction results
 print("Prediction result:", preds.item())
+
+####
+
+target = preds.item()
+
+# Extract the model's embeddings
+embedding_dict = model.gnn.embeddings
+
+# Instantiate the new model without the embedding layer
+model_no_embedding = BuySellLinkPredictionNoEmbedding(
+    num_nodes_dict,
+    embedding_dim=embedding_dim,
+    num_edge_features=num_edge_features,
+    out_channels=out_channels,
+    edge_types=edge_types,
+    num_layers=num_layers,
+).to(device)
+
+# Load the state dict of the model with embeddings
+state_dict_with_embeddings = torch.load(model_path, map_location=device)
+
+# Remove the embeddings from the state dict
+state_dict_no_embeddings = {key: value for key, value in state_dict_with_embeddings.items()
+                            if not key.startswith('gnn.embeddings')}
+
+# Load the state dict into the model without embeddings
+model_no_embedding.load_state_dict(state_dict_no_embeddings)
+
+
+# Instantiate the HeteroGNNExplainer
+explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=0.01, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr)
+
+# Prepare the edge of interest
+which_edge = 0
+congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
+
+edge_to_explain = torch.tensor([congressperson_id, ticker_id], device=device)  # Replace with your edge of interest
+edge_type_to_explain = ("congressperson", "buy-sell", "ticker")
+
+
+# Run the explain_edge method
+node_masks, edge_masks = explainer(
+    model = model_no_embedding,
+    x_dict = embedding_dict,
+    edge_index_dict = data.edge_index_dict,
+    target = target,
+    index = None
+)
+
+print("Node masks:", node_masks)
+print("Edge masks:", edge_masks)
