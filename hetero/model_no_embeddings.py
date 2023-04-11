@@ -85,6 +85,7 @@ class BuySellLinkPredictionNoEmbedding(torch.nn.Module):
         
         # Compute predictions using linear layer and sigmoid activation
         preds = self.prediction_head(concatenated_emb)
+        print("preds befoe sig", preds) 
         # print("preds befoe sig", preds)
         preds = self.sigmoid(preds).squeeze()
         
