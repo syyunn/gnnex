@@ -7,6 +7,8 @@ from model_no_embeddings import BuySellLinkPredictionNoEmbedding
 
 import pickle
 
+from tqdm import tqdm
+
 
 # Load your HeteroData object named 'data'
 with open("./data/hetero_graph_data.pkl", "rb") as f:
@@ -151,9 +153,9 @@ explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, devi
 
 # Prepare the edge of interest
 which_edges = [i for i in range(data[('congressperson', 'buy-sell', 'ticker')]['edge_index'].shape[1])]
-for which_edge in which_edges:
 
-
+results = {}
+for which_edge in tqdm(which_edges):
     congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
 
     edge_to_explain = torch.tensor([congressperson_id, ticker_id], device=device)  # Replace with your edge of interest
@@ -170,3 +172,11 @@ for which_edge in which_edges:
 
     print("Node masks:", node_masks)
     print("Edge masks:", edge_masks)
+
+    # Add the node_masks and edge_masks to the results dictionary
+    results[(congressperson_id, ticker_id)] = {'node_masks': node_masks, 'edge_masks': edge_masks}
+
+# Save the results to a pickle file
+with open("node_edge_masks_results.pkl", "wb") as f:
+    pickle.dump(results, f)
+
