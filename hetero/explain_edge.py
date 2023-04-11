@@ -170,14 +170,14 @@ for which_edge in tqdm(which_edges):
         index = None
     )
 
-    # print("Node masks:", node_masks)
-    # print("Edge masks:", edge_masks)
+    print("Node masks:", node_masks)
+    print("Edge masks:", edge_masks)
 
     results[(congressperson_id.item(), ticker_id.item())] = {
-        'node_masks': {k: v.cpu().detach().numpy() for k, v in node_masks.items()},
-        'edge_masks': {k: v.cpu().detach().numpy() for k, v in edge_masks.items()},
+        'node_masks': {k: v.cpu().detach().numpy() for k, v in node_masks[1].items()},
+        'edge_masks': {k: v.cpu().detach().numpy() for k, v in edge_masks[1].items()},
     }
-    
+
     with open("node_edge_masks_results.pkl", "wb") as f:
         pickle.dump(results, f)
 
