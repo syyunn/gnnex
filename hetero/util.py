@@ -105,3 +105,28 @@ def evaluate(loader, model, device, num_nodes_dict, test_data, edge_to_attr):
     avg_auc_roc = total_auc_roc / num_batches if num_batches > 0 else None
 
     return avg_loss, avg_accuracy, avg_auc_roc
+
+def to_networkx_hetero(data):
+    import networkx as nx
+    from torch_geometric.data import HeteroData
+
+    # Assuming you have a HeteroData object named `data`
+
+    # Step 1: Create an empty MultiGraph
+    G = nx.MultiGraph()
+
+    # Step 2: Add nodes to the graph
+    for node_type in data.node_types:
+        nodes = data[node_type].node_id.numpy()
+        G.add_nodes_from(nodes, node_type=node_type)
+
+    # Step 3: Add edges to the graph
+    for edge_type, edge_index in data.edge_index_dict.items():
+        src_type, _, dst_type = edge_type
+        edge_tuples = list(zip(edge_index[0].numpy(), edge_index[1].numpy()))
+        G.add_edges_from(edge_tuples, edge_type=edge_type, src_type=src_type, dst_type=dst_type)
+
+    # Now you can use G, which is an undirected heterogeneous graph represented as a NetworkX MultiGraph
+
+
+

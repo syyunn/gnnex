@@ -53,6 +53,49 @@ for edge_type, edge_index in data.edge_index_dict.items():
 print("Edge types:", edge_types)
 print(len(edge_types))
 
-nx_graph = to_networkx(data)
 
+G = nx.MultiGraph()
+
+# Add ticker nodes
+ticker_nodes = [(k, {'node_type': 'ticker', 'label': v}) for k, v in unique_tickers.items()]
+G.add_nodes_from(ticker_nodes)
+
+# Add congressperson nodes
+congressperson_nodes = [(k, {'node_type': 'congressperson', 'label': v}) for k, v in unique_congresspeople.items()]
+G.add_nodes_from(congressperson_nodes)
+
+# Add committee nodes
+committee_nodes = [(k, {'node_type': 'committee', 'label': v}) for k, v in unique_committees.items()]
+G.add_nodes_from(committee_nodes)
+
+# Add bill nodes
+bill_nodes = [(k, {'node_type': 'bill', 'label': v}) for k, v in unique_bills.items()]
+G.add_nodes_from(bill_nodes)
+
+# Add naics nodes
+naics_nodes = [(k, {'node_type': 'naics', 'label': v}) for k, v in unique_naics.items()]
+G.add_nodes_from(naics_nodes)
+
+# definse some utils to get attributes date
+from datetime import date, timedelta
+
+def days_to_date(days_elapsed, reference_date=date(2016, 1, 1)):
+    return reference_date + timedelta(days=int(days_elapsed))
+
+def tensor_to_dates(edge_attr_tensor):
+    start_date = days_to_date(edge_attr_tensor[0])
+    end_date = days_to_date(edge_attr_tensor[1])
+    return start_date, end_date
+
+# Iterate over edge types and add edges with attributes
+for edge_type, edge_index in data.edge_index_dict.items():
+    edge_attr = data.edge_attr_dict[edge_type]
+
+    for i, (src, dst) in enumerate(edge_index.t()):
+        # Extract the semantic node labels from reverse dictionaries
+        src_label = reverse_tickers.get(src.item()) or reverse_congresspeople.get(src.item()) or reverse_committees.get(src.item()) or reverse_bills.get(src.item()) or reverse_naics.get(src.item())
+        dst_label = reverse_tickers.get(dst.item()) or reverse_congresspeople.get(dst.item()) or reverse_committees.get(dst.item()) or reverse_bills.get(dst.item()) or reverse_naics.get(dst.item())
+
+        start_date, end_date = tensor_to_dates(edge_attr[i])
+        G.add_edge(src_label, dst_label, key=edge_type, start_date=start_date, end_date=end_date)
 pass

@@ -116,7 +116,7 @@ with torch.no_grad():
     preds, preds_before_sig = model(x_dict, data.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=edge_attr)
 
 # Print the prediction results
-print("Prediction result:", preds.item())
+# print("Prediction result:", preds.item())
 
 ####
 
@@ -170,8 +170,8 @@ for which_edge in tqdm(which_edges):
         index = None
     )
 
-    print("Node masks:", node_masks)
-    print("Edge masks:", edge_masks)
+    # print("Node masks:", node_masks)
+    # print("Edge masks:", edge_masks)
 
     # Add the node_masks and edge_masks to the results dictionary
     results[(congressperson_id.item(), ticker_id.item())] = {'node_masks': node_masks, 'edge_masks': edge_masks}
