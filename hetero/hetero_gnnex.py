@@ -60,7 +60,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
         'EPS': 1e-15,
     }
 
-    def __init__(self, model, epochs: int = 100, lr: float = 0.01, device='cpu', data=None, edge_label_index=None, edge_label_attr=None, **kwargs):
+    def __init__(self, model, epochs: int = 100, lr: float = 0.1, device='cpu', data=None, edge_label_index=None, edge_label_attr=None, **kwargs):
         super().__init__()
         self.edge_label_index = edge_label_index
         self.edge_label_attr = edge_label_attr
@@ -149,7 +149,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             set_hetero_masks(model, self.edge_mask_dict, edge_index_dict, apply_sigmoid=True)
             parameters.extend(self.edge_mask_dict.values())
 
-        optimizer = torch.optim.Adam(parameters, lr=self.lr)
+        optimizer = torch.optim.Adam(parameters, lr=self.lr) # this means we're udpating this edge/node_mask dict only.
 
         for i in range(self.epochs):
             print("Epoch: ", i)
