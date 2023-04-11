@@ -168,7 +168,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
 
 
         for i in range(self.epochs):            
-            print("Epoch: ", i)
+            # print("Epoch: ", i)
             optimizer.zero_grad()
 
             h_dict = {
@@ -188,14 +188,14 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             _, y_hat = model(h_dict, edge_index_dict, scaled_edge_attr_dict, self.edge_label_index, self.edge_label_attr)
             y = target
 
-            print("y_hat", y_hat)
-            print("y", y)
+            # print("y_hat", y_hat)
+            # print("y", y)
 
             if index is not None:
                 y_hat, y = y_hat[index], y[index]
 
             loss = self._loss(y_hat, y)
-            print("loss", loss)
+            # print("loss", loss)
 
             loss.backward()
             optimizer.step()
