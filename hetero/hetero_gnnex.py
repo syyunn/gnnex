@@ -160,10 +160,12 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             else:
                 return 0.01
 
+        # Set up the optimizer
+        optimizer = torch.optim.Adam(parameters, lr=self.lr) # this means we're udpating this edge/node_mask dict only.
+
         # Set up the learning rate scheduler
         scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=custom_lr_schedule)
 
-        optimizer = torch.optim.Adam(parameters, lr=self.lr) # this means we're udpating this edge/node_mask dict only.
 
         for i in range(self.epochs):            
             print("Epoch: ", i)
