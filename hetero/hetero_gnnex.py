@@ -149,9 +149,23 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             set_hetero_masks(model, self.edge_mask_dict, edge_index_dict, apply_sigmoid=True)
             parameters.extend(self.edge_mask_dict.values())
 
+        # Define the learning rate scheduler function
+        def custom_lr_schedule(epoch):
+            if epoch < 5:
+                return 10
+            elif epoch < 10:
+                return 1
+            elif epoch < 20:
+                return 0.1
+            else:
+                return 0.01
+
+        # Set up the learning rate scheduler
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=custom_lr_schedule)
+
         optimizer = torch.optim.Adam(parameters, lr=self.lr) # this means we're udpating this edge/node_mask dict only.
 
-        for i in range(self.epochs):
+        for i in range(self.epochs):            
             print("Epoch: ", i)
             optimizer.zero_grad()
 
@@ -183,6 +197,8 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
 
             loss.backward()
             optimizer.step()
+
+            scheduler.step()
 
             if i == 0:
                 if self.node_mask_dict is not None:
