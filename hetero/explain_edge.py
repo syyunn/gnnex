@@ -146,7 +146,7 @@ model_no_embedding.load_state_dict(state_dict_no_embeddings)
 
 # Instantiate the HeteroGNNExplainer
 epochs = 100
-lr = 0.1
+lr = 1
 explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=0.001, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr)
 
 # Prepare the edge of interest
