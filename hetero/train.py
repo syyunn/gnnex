@@ -222,8 +222,8 @@ for epoch in range(epochs):
         num_zeros = torch.sum(torch.eq(preds, 0)).item()
 
         # Print the results
-        print(f"Number of ones in 'preds': {num_ones}")
-        print(f"Number of zeros in 'preds': {num_zeros}")
+        # print(f"Number of ones in 'preds': {num_ones}")
+        # print(f"Number of zeros in 'preds': {num_zeros}")
         
         # Compute loss
         loss = F.binary_cross_entropy(preds, edge_label.float())
