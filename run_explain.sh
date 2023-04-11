@@ -1,6 +1,4 @@
 #!/bin/bash
-#SBATCH -s 20
-#SBATCH -g volta:1
 
 module load anaconda/2023a
 
