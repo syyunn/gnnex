@@ -196,8 +196,8 @@ for epoch in range(epochs):
         num_positives = torch.sum(edge_label == 1).item()
 
         # # Print the counts
-        print(f"Number of negative samples (label 0): {num_negatives}")
-        print(f"Number of positive samples (label 1): {num_positives}")
+        # print(f"Number of negative samples (label 0): {num_negatives}")
+        # print(f"Number of positive samples (label 1): {num_positives}")
         
         # print("batch.edge_attr_dict", batch.edge_attr_dict)
 
