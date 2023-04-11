@@ -176,9 +176,13 @@ for which_edge in tqdm(which_edges):
     # Add the node_masks and edge_masks to the results dictionary
     results[(congressperson_id.item(), ticker_id.item())] = {'node_masks': node_masks, 'edge_masks': edge_masks}
 
-    # For debug purposes
-    break
+    with open("node_edge_masks_results.pkl", "wb") as f:
+        pickle.dump(results, f)
 
-# Save the results to a pickle file
-with open("node_edge_masks_results.pkl", "wb") as f:
-    pickle.dump(results, f)
+
+    # For debug purposes
+    # break
+
+# # Save the results to a pickle file
+# with open("node_edge_masks_results.pkl", "wb") as f:
+#     pickle.dump(results, f)
