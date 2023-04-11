@@ -215,7 +215,7 @@ for epoch in range(epochs):
         }
         # print("scaled_edge_attr_dict", scaled_edge_attr_dict)
         # Forward pass
-        preds = model(x_dict, batch.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=batch_edge_label_attr)
+        preds, preds_before_sig = model(x_dict, batch.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=batch_edge_label_attr)
         # print("preds", preds)
         # Assuming 'preds' is a tensor obtained from the model's output
         num_ones = torch.sum(torch.eq(preds, 1)).item()

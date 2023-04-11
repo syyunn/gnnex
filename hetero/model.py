@@ -95,8 +95,8 @@ class BuySellLinkPrediction(torch.nn.Module):
         concatenated_emb = torch.cat([congressperson_emb[edge_label_index[0]], ticker_emb[edge_label_index[1]], edge_label_attr], dim=-1)
         
         # Compute predictions using linear layer and sigmoid activation
-        preds = self.prediction_head(concatenated_emb)
+        preds_before_sig = self.prediction_head(concatenated_emb)
         # print("preds befoe sig", preds)
-        preds = self.sigmoid(preds).squeeze()
+        preds = self.sigmoid(preds_before_sig).squeeze()
         
-        return preds
+        return preds, preds_before_sig
