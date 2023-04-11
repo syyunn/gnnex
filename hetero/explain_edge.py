@@ -111,14 +111,14 @@ scaled_edge_attr_dict = {key: value / total_days for key, value in data.edge_att
 # Perform inference using the trained model
 with torch.no_grad():
     # preds = model(x_dict, batch.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=batch_edge_label_attr)
-    preds = model(x_dict, data.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=edge_attr)
+    preds, preds_before_sig = model(x_dict, data.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=edge_attr)
 
 # Print the prediction results
 print("Prediction result:", preds.item())
 
 ####
 
-target = preds.item()
+target = preds_before_sig.item()
 
 # Extract the model's embeddings
 embedding_dict = model.gnn.embeddings

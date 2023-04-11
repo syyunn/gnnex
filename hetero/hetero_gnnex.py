@@ -169,7 +169,11 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             total_days = (today - start_date).days
             scaled_edge_attr_dict = {key: value / total_days for key, value in self.data.edge_attr_dict.items()}
 
-            y_hat, y = model(h_dict, edge_index_dict, scaled_edge_attr_dict, self.edge_label_index, self.edge_label_attr), target
+            _, y_hat = model(h_dict, edge_index_dict, scaled_edge_attr_dict, self.edge_label_index, self.edge_label_attr)
+            y = target
+
+            print("y_hat", y_hat)
+            print("y", y)
 
             if index is not None:
                 y_hat, y = y_hat[index], y[index]
@@ -321,7 +325,8 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
 
 
     def _loss(self, y_hat: Tensor, y: Tensor) -> Tensor:
-        loss = -torch.sum(y * torch.log(y_hat), dim=0).mean()
+        # loss = -torch.sum(y * torch.log(y_hat), dim=0).mean()
+        loss = torch.mean(torch.sum((y - y_hat) ** 2, dim=0))
 
         for key in self.coeffs:
             if key in self.node_mask_dict:

@@ -267,5 +267,5 @@ for epoch in range(epochs):
         # Update the best test AUC-ROC score
         best_test_auc_roc = test_auc_roc
         # Save the model with the best test AUC-ROC score
-        torch.save(model.state_dict(), "buysell_link_prediction_best_model.pt")
         print("Model saved with best test AUC-ROC:", best_test_auc_roc)
+        torch.save(model.state_dict(), f"buysell_link_prediction_best_model_accu_{best_test_auc_roc}.pt")
