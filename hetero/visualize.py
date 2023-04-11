@@ -98,4 +98,16 @@ for edge_type, edge_index in data.edge_index_dict.items():
 
         start_date, end_date = tensor_to_dates(edge_attr[i])
         G.add_edge(src_label, dst_label, key=edge_type, start_date=start_date, end_date=end_date)
+
+
+import torch
+import pickle
+
+with open("node_edge_masks_results.pkl", "rb") as f:
+    results = torch.load(f, map_location=torch.device('cpu'))
+
+print(results)
+
 pass
+
+
