@@ -204,21 +204,33 @@ def get_subgraph(G, source_nodes, node_masks, edge_masks, node_mask_threshold, e
     return G.subgraph(subgraph_nodes)
 
 
-def draw_subgraph(subgraph, node_colors, title=None):
-    pos = nx.spring_layout(subgraph, seed=42)
+def draw_subgraph(subgraph, node_colors, shapes, title=None, congressperson_label=None, ticker_label=None):
+    
+
+    pos = nx.spring_layout(subgraph, seed=42, k=0.35)
     
     node_legends = []
-    for node_type, color in node_colors.items():
-        nx.draw(subgraph,
-                pos,
-                nodelist=[n for n in subgraph.nodes if subgraph.nodes[n].get('node_type') == node_type],
-                node_color=color,
-                label=node_type)
-        node_legends.append(plt.Line2D([], [], color=color, marker='o', linestyle='', label=node_type))
-        
-    nx.draw_networkx_labels(subgraph, pos, labels={n: n for n in subgraph.nodes})
+    for node_type, (color, shape) in zip(node_colors.keys(), zip(node_colors.values(), shapes.values())):
+        nx.draw_networkx_nodes(subgraph,
+                               pos,
+                               nodelist=[n for n in subgraph.nodes if subgraph.nodes[n].get('node_type') == node_type],
+                               node_color=color,
+                               node_shape=shape,
+                               label=node_type)
+        node_legends.append(plt.Line2D([], [], color=color, marker=shape, linestyle='', label=node_type))
+    
+    nx.draw_networkx_edges(subgraph, pos)
+    nx.draw_networkx_labels(subgraph, pos, labels={n: subgraph.nodes[n].get('name', n) for n in subgraph.nodes})
+    
+    # Annotate the congressperson and ticker nodes
+    if congressperson_label is not None and ticker_label is not None:
+        for node, coords in pos.items():
+            if node == congressperson_label:
+                plt.annotate("Target Congressperson", (coords[0], coords[1]), textcoords="offset points", xytext=(-15,10), ha='center', fontsize=9, color='blue')
+            if node == ticker_label:
+                plt.annotate("Target Ticker", (coords[0], coords[1]), textcoords="offset points", xytext=(-15,10), ha='center', fontsize=9, color='red')
 
-    plt.title(title)    
+    plt.title(title)
     plt.legend(handles=node_legends)
     plt.show()
     pass
@@ -232,13 +244,17 @@ node_colors = {
     'naics': 'purple'
 }
 
-def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types, edge_index_dicts):
+def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes):
     thresholded_nodes = set()
     thresholded_edges = set()
 
     for node_type, node_mask in node_masks.items():
         node_indices = np.where(node_mask > node_mask_threshold)[0]
         thresholded_nodes.update([integer_to_semantic_index[node_type][i] for i in node_indices])
+
+    # Add target nodes to the set
+    for node_label in target_nodes:
+        thresholded_nodes.add(node_label)
 
     for edge_type, edge_mask in edge_masks.items():
         edge_indices = np.where(edge_mask > edge_mask_threshold)[0]
@@ -261,6 +277,22 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
 
     return subgraph
 
+node_colors = {
+    'ticker': 'red',
+    'congressperson': 'blue',
+    'committee': 'green',
+    'bill': 'orange',
+    'naics': 'purple'
+}
+
+shapes = {
+    'ticker': 'o',
+    'congressperson': 's',
+    'committee': '^',
+    'bill': 'D',
+    'naics': 'v'
+}
+
 
 for congressperson_label, ticker_label in results.keys():
     print(congressperson_label, ticker_label)
@@ -276,7 +308,12 @@ for congressperson_label, ticker_label in results.keys():
     node_mask_threshold = 0.999
     edge_mask_threshold = 0.999
 
-    subgraph = get_thresholded_subgraph(loaded_G, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types, edge_index_dicts)
-    title = f"Subgraph for {congressperson_label} and {ticker_label} (Filtered)"
-    draw_subgraph(subgraph, node_colors, title=title)
+    congressperson = integer_to_semantic_index['congressperson'][congressperson_label]
+    ticker = integer_to_semantic_index['ticker'][ticker_label]
+
+    target_nodes = [congressperson_label, ticker_label]
+
+    subgraph = get_thresholded_subgraph(loaded_G, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes)
+    title = f"Subgraph for {congressperson} and {ticker}"
+    draw_subgraph(subgraph, node_colors, shapes, title=title, congressperson_label=congressperson, ticker_label=ticker)
     pass
