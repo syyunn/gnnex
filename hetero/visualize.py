@@ -4,6 +4,8 @@ from tqdm import tqdm
 import numpy as np
 import random
 
+from datetime import timedelta
+
 import torch
 
 import networkx as nx
@@ -53,75 +55,75 @@ for edge_type, edge_index in data.edge_index_dict.items():
 print("Edge types:", edge_types)
 print(len(edge_types))
 
-# Convert Heterograph to NetworkX MultiGraph
-G = nx.MultiGraph()
+# # Convert Heterograph to NetworkX MultiGraph
+# G = nx.MultiGraph()
 
-# Add ticker nodes
-ticker_nodes = [(k, {'node_type': 'ticker', 'label': v}) for k, v in unique_tickers.items()]
-G.add_nodes_from(ticker_nodes)
+# # Add ticker nodes
+# ticker_nodes = [(k, {'node_type': 'ticker', 'label': v}) for k, v in unique_tickers.items()]
+# G.add_nodes_from(ticker_nodes)
 
-# Add congressperson nodes
-congressperson_nodes = [(k, {'node_type': 'congressperson', 'label': v}) for k, v in unique_congresspeople.items()]
-G.add_nodes_from(congressperson_nodes)
+# # Add congressperson nodes
+# congressperson_nodes = [(k, {'node_type': 'congressperson', 'label': v}) for k, v in unique_congresspeople.items()]
+# G.add_nodes_from(congressperson_nodes)
 
-# Add committee nodes
-committee_nodes = [(k, {'node_type': 'committee', 'label': v}) for k, v in unique_committees.items()]
-G.add_nodes_from(committee_nodes)
+# # Add committee nodes
+# committee_nodes = [(k, {'node_type': 'committee', 'label': v}) for k, v in unique_committees.items()]
+# G.add_nodes_from(committee_nodes)
 
-# Add bill nodes
-bill_nodes = [(k, {'node_type': 'bill', 'label': v}) for k, v in unique_bills.items()]
-G.add_nodes_from(bill_nodes)
+# # Add bill nodes
+# bill_nodes = [(k, {'node_type': 'bill', 'label': v}) for k, v in unique_bills.items()]
+# G.add_nodes_from(bill_nodes)
 
-# Add naics nodes
-naics_nodes = [(k, {'node_type': 'naics', 'label': v}) for k, v in unique_naics.items()]
-G.add_nodes_from(naics_nodes)
+# # Add naics nodes
+# naics_nodes = [(k, {'node_type': 'naics', 'label': v}) for k, v in unique_naics.items()]
+# G.add_nodes_from(naics_nodes)
 
-# definse some utils to get attributes date
-from datetime import date, timedelta
+# # definse some utils to get attributes date
+# from datetime import date, timedelta
 
-def days_to_date(days_elapsed, reference_date=date(2016, 1, 1)):
-    return reference_date + timedelta(days=int(days_elapsed))
+# def days_to_date(days_elapsed, reference_date=date(2016, 1, 1)):
+#     return reference_date + timedelta(days=int(days_elapsed))
 
-def tensor_to_dates(edge_attr_tensor):
-    start_date = days_to_date(edge_attr_tensor[0])
-    end_date = days_to_date(edge_attr_tensor[1])
-    return start_date, end_date
+# def tensor_to_dates(edge_attr_tensor):
+#     start_date = days_to_date(edge_attr_tensor[0])
+#     end_date = days_to_date(edge_attr_tensor[1])
+#     return start_date, end_date
 
-# Create a dictionary mapping edge types to their reverse dictionaries
-edge_type_to_reverse_dict = {
-    'ticker': reverse_tickers,
-    'congressperson': reverse_congresspeople,
-    'committee': reverse_committees,
-    'bill': reverse_bills,
-    'naics': reverse_naics
-}
+# # Create a dictionary mapping edge types to their reverse dictionaries
+# edge_type_to_reverse_dict = {
+#     'ticker': reverse_tickers,
+#     'congressperson': reverse_congresspeople,
+#     'committee': reverse_committees,
+#     'bill': reverse_bills,
+#     'naics': reverse_naics
+# }
 
-# Iterate over edge types and add edges with attributes
-for edge_type, edge_index in data.edge_index_dict.items():
-    edge_attr = data.edge_attr_dict[edge_type]
-    reverse_src_dict = edge_type_to_reverse_dict[edge_type[0]]
-    reverse_dst_dict = edge_type_to_reverse_dict[edge_type[2]]
+# # Iterate over edge types and add edges with attributes
+# for edge_type, edge_index in data.edge_index_dict.items():
+#     edge_attr = data.edge_attr_dict[edge_type]
+#     reverse_src_dict = edge_type_to_reverse_dict[edge_type[0]]
+#     reverse_dst_dict = edge_type_to_reverse_dict[edge_type[2]]
 
-    for i, (src, dst) in enumerate(edge_index.t()):
-        # Extract the semantic node labels from corresponding reverse dictionaries
-        src_label = reverse_src_dict.get(src.item())
-        dst_label = reverse_dst_dict.get(dst.item())
+#     for i, (src, dst) in enumerate(edge_index.t()):
+#         # Extract the semantic node labels from corresponding reverse dictionaries
+#         src_label = reverse_src_dict.get(src.item())
+#         dst_label = reverse_dst_dict.get(dst.item())
 
-        start_date, end_date = tensor_to_dates(edge_attr[i])
-        G.add_edge(src_label, dst_label, key=edge_type, start_date=start_date, end_date=end_date)
+#         start_date, end_date = tensor_to_dates(edge_attr[i])
+#         G.add_edge(src_label, dst_label, key=edge_type, start_date=start_date, end_date=end_date)
 
-# Specify the file name where you want to save the pickled graph
-pickle_file = 'networkx_multigraph.pkl'
+# # Specify the file name where you want to save the pickled graph
+# pickle_file = 'networkx_multigraph.pkl'
 
-# Open the file in binary write mode and pickle the graph
-with open(pickle_file, 'wb') as f:
-    pickle.dump(G, f)
+# # Open the file in binary write mode and pickle the graph
+# with open(pickle_file, 'wb') as f:
+#     pickle.dump(G, f)
 
-# Optionally, print a message to indicate that the graph has been pickled successfully
-print(f'MultiGraph G has been pickled and saved to {pickle_file}')
+# # Optionally, print a message to indicate that the graph has been pickled successfully
+# print(f'MultiGraph G has been pickled and saved to {pickle_file}')
 
 
-# Specify the file name where the pickled graph is saved
+# # Specify the file name where the pickled graph is saved
 pickle_file = 'networkx_multigraph.pkl'
 
 # Open the file in binary read mode and unpickle the graph
@@ -139,31 +141,41 @@ with open("node_edge_masks_results.pkl", "rb") as f:
     results = pickle.load(f)
 
 
-def get_subgraph(G, source_nodes, max_hops):
+def get_subgraph(G, source_nodes, max_hops, filter_start_date, filter_end_date):
     subgraph_nodes = set(source_nodes)
     for _ in range(max_hops):
         neighbors = set()
         for node in subgraph_nodes:
-            neighbors |= set(G.neighbors(node))
+            for neighbor, edge_data in G[node].items():
+                for edge_key, edge_attributes in edge_data.items():
+                    if filter_start_date <= edge_attributes["start_date"] and edge_attributes['end_date'] <= filter_end_date:
+                        neighbors.add(neighbor)
         subgraph_nodes |= neighbors
     return G.subgraph(subgraph_nodes)
 
 def draw_subgraph(subgraph, node_colors, title=None):
     pos = nx.spring_layout(subgraph, seed=42)
+    
+    # Create an empty list for node legends
+    node_legends = []
+
     for node_type, color in node_colors.items():
         nx.draw(subgraph,
                 pos,
                 nodelist=[n for n in subgraph.nodes if subgraph.nodes[n]['node_type'] == node_type],
                 node_color=color,
                 label=node_type)
-
+        # Append a Line2D object for each node_type to the node_legends list
+        node_legends.append(plt.Line2D([], [], color=color, marker='o', linestyle='', label=node_type))
+        
     nx.draw_networkx_labels(subgraph, pos, labels={n: n for n in subgraph.nodes}, font_size=10)
     # nx.draw_networkx_edge_labels(subgraph, pos, edge_labels={(u, v): d['key'] for u, v, d in subgraph.edges(data=True)})
-    plt.legend()
     if title:
         plt.title(title)
+    
+    # Add the node_legends list to the legend
+    plt.legend(handles=node_legends)
     plt.show()
-
 
 node_colors = {
     'ticker': 'red',
@@ -183,12 +195,21 @@ for congressperson_label, ticker_label in results.keys():
     # read the edge masks
     edge_masks = results[(congressperson_label, ticker_label)]['edge_masks']
 
-    source_nodes = [congressperson_id, ticker_id]
-    subgraph = get_subgraph(loaded_G, source_nodes, max_hops=1)    
+    # Find the sale or purchase edge attributes
+    sale_purchase_edges = loaded_G.get_edge_data(congressperson_id, ticker_id)
 
-    title = f"Subgraph for {congressperson_label} and {ticker_label}"
-    draw_subgraph(subgraph, node_colors, title=title)
+    if sale_purchase_edges is not None:
+        # Filter only the edges with start_date between the desired range
+        filter_months = 12
+        for edge_key, edge_attributes in sale_purchase_edges.items():
+            filter_start_date = edge_attributes["start_date"] - timedelta(days=filter_months*30)
+            filter_end_date = edge_attributes["start_date"] + timedelta(days=filter_months*30)
 
+            source_nodes = [congressperson_id, ticker_id]
+            subgraph = get_subgraph(loaded_G, source_nodes, max_hops=2, filter_start_date=filter_start_date, filter_end_date=filter_end_date)
+
+            title = f"Subgraph for {congressperson_label} and {ticker_label} (Filtered)"
+            draw_subgraph(subgraph, node_colors, title=title)
     pass
 pass
 
