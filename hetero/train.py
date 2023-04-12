@@ -55,6 +55,8 @@ for edge_type, edge_index in data.edge_index_dict.items():
     data.edge_index_dict[edge_type] = edge_index.to(torch.long)
     edge_types.append(edge_type)
 
+model_edge_types = [edge_type for edge_type in edge_types if edge_type not in [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson")]]
+
 print("Edge types:", edge_types)
 print(len(edge_types))
 
@@ -93,7 +95,6 @@ edge_attr = train_data["congressperson", "buy-sell", "ticker"].edge_attr
 
 # Create a dictionary to map edge indices to their attributes
 edge_to_attr = {(src.item(), dst.item()): attr.to(device) for src, dst, attr in zip(*edge_label_index, edge_attr)}
-
 
 # In the first hop, we sample at most 20 neighbors.
 # In the second hop, we sample at most 10 neighbors.
@@ -147,7 +148,8 @@ print(num_nodes_dict)
 # Instantiate the model
 num_layers = 2
 print("num_layers", num_layers)
-model = BuySellLinkPrediction(num_nodes_dict, embedding_dim=64, num_edge_features=2, out_channels=64, edge_types=edge_types, num_layers=num_layers).to(device)
+# model = BuySellLinkPrediction(num_nodes_dict, embedding_dim=64, num_edge_features=2, out_channels=64, edge_types=edge_types, num_layers=num_layers).to(device)
+model = BuySellLinkPrediction(num_nodes_dict, embedding_dim=64, num_edge_features=2, out_channels=64, edge_types=model_edge_types, num_layers=num_layers).to(device)
 
 # Training loop
 import torch.optim as optim
