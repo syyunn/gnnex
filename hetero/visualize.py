@@ -54,60 +54,71 @@ print("Edge types:", edge_types)
 print(len(edge_types))
 
 # Convert Heterograph to NetworkX MultiGraph
-# G = nx.MultiGraph()
+G = nx.MultiGraph()
 
-# # Add ticker nodes
-# ticker_nodes = [(k, {'node_type': 'ticker', 'label': v}) for k, v in unique_tickers.items()]
-# G.add_nodes_from(ticker_nodes)
+# Add ticker nodes
+ticker_nodes = [(k, {'node_type': 'ticker', 'label': v}) for k, v in unique_tickers.items()]
+G.add_nodes_from(ticker_nodes)
 
-# # Add congressperson nodes
-# congressperson_nodes = [(k, {'node_type': 'congressperson', 'label': v}) for k, v in unique_congresspeople.items()]
-# G.add_nodes_from(congressperson_nodes)
+# Add congressperson nodes
+congressperson_nodes = [(k, {'node_type': 'congressperson', 'label': v}) for k, v in unique_congresspeople.items()]
+G.add_nodes_from(congressperson_nodes)
 
-# # Add committee nodes
-# committee_nodes = [(k, {'node_type': 'committee', 'label': v}) for k, v in unique_committees.items()]
-# G.add_nodes_from(committee_nodes)
+# Add committee nodes
+committee_nodes = [(k, {'node_type': 'committee', 'label': v}) for k, v in unique_committees.items()]
+G.add_nodes_from(committee_nodes)
 
-# # Add bill nodes
-# bill_nodes = [(k, {'node_type': 'bill', 'label': v}) for k, v in unique_bills.items()]
-# G.add_nodes_from(bill_nodes)
+# Add bill nodes
+bill_nodes = [(k, {'node_type': 'bill', 'label': v}) for k, v in unique_bills.items()]
+G.add_nodes_from(bill_nodes)
 
-# # Add naics nodes
-# naics_nodes = [(k, {'node_type': 'naics', 'label': v}) for k, v in unique_naics.items()]
-# G.add_nodes_from(naics_nodes)
+# Add naics nodes
+naics_nodes = [(k, {'node_type': 'naics', 'label': v}) for k, v in unique_naics.items()]
+G.add_nodes_from(naics_nodes)
 
-# # definse some utils to get attributes date
-# from datetime import date, timedelta
+# definse some utils to get attributes date
+from datetime import date, timedelta
 
-# def days_to_date(days_elapsed, reference_date=date(2016, 1, 1)):
-#     return reference_date + timedelta(days=int(days_elapsed))
+def days_to_date(days_elapsed, reference_date=date(2016, 1, 1)):
+    return reference_date + timedelta(days=int(days_elapsed))
 
-# def tensor_to_dates(edge_attr_tensor):
-#     start_date = days_to_date(edge_attr_tensor[0])
-#     end_date = days_to_date(edge_attr_tensor[1])
-#     return start_date, end_date
+def tensor_to_dates(edge_attr_tensor):
+    start_date = days_to_date(edge_attr_tensor[0])
+    end_date = days_to_date(edge_attr_tensor[1])
+    return start_date, end_date
 
-# # Iterate over edge types and add edges with attributes
-# for edge_type, edge_index in data.edge_index_dict.items():
-#     edge_attr = data.edge_attr_dict[edge_type]
+# Create a dictionary mapping edge types to their reverse dictionaries
+edge_type_to_reverse_dict = {
+    'ticker': reverse_tickers,
+    'congressperson': reverse_congresspeople,
+    'committee': reverse_committees,
+    'bill': reverse_bills,
+    'naics': reverse_naics
+}
 
-#     for i, (src, dst) in enumerate(edge_index.t()):
-#         # Extract the semantic node labels from reverse dictionaries
-#         src_label = reverse_tickers.get(src.item()) or reverse_congresspeople.get(src.item()) or reverse_committees.get(src.item()) or reverse_bills.get(src.item()) or reverse_naics.get(src.item())
-#         dst_label = reverse_tickers.get(dst.item()) or reverse_congresspeople.get(dst.item()) or reverse_committees.get(dst.item()) or reverse_bills.get(dst.item()) or reverse_naics.get(dst.item())
+# Iterate over edge types and add edges with attributes
+for edge_type, edge_index in data.edge_index_dict.items():
+    edge_attr = data.edge_attr_dict[edge_type]
+    reverse_src_dict = edge_type_to_reverse_dict[edge_type[0]]
+    reverse_dst_dict = edge_type_to_reverse_dict[edge_type[2]]
 
-#         start_date, end_date = tensor_to_dates(edge_attr[i])
-#         G.add_edge(src_label, dst_label, key=edge_type, start_date=start_date, end_date=end_date)
+    for i, (src, dst) in enumerate(edge_index.t()):
+        # Extract the semantic node labels from corresponding reverse dictionaries
+        src_label = reverse_src_dict.get(src.item())
+        dst_label = reverse_dst_dict.get(dst.item())
 
-# # Specify the file name where you want to save the pickled graph
-# pickle_file = 'networkx_multigraph.pkl'
+        start_date, end_date = tensor_to_dates(edge_attr[i])
+        G.add_edge(src_label, dst_label, key=edge_type, start_date=start_date, end_date=end_date)
 
-# # Open the file in binary write mode and pickle the graph
-# with open(pickle_file, 'wb') as f:
-#     pickle.dump(G, f)
+# Specify the file name where you want to save the pickled graph
+pickle_file = 'networkx_multigraph.pkl'
 
-# # Optionally, print a message to indicate that the graph has been pickled successfully
-# print(f'MultiGraph G has been pickled and saved to {pickle_file}')
+# Open the file in binary write mode and pickle the graph
+with open(pickle_file, 'wb') as f:
+    pickle.dump(G, f)
+
+# Optionally, print a message to indicate that the graph has been pickled successfully
+print(f'MultiGraph G has been pickled and saved to {pickle_file}')
 
 
 # Specify the file name where the pickled graph is saved
@@ -128,10 +139,56 @@ with open("node_edge_masks_results.pkl", "rb") as f:
     results = pickle.load(f)
 
 
-for congressperson_label, ticker_lable in results.keys():
-    print(congressperson_label, ticker_lable)
-    congressperson_label = reverse_congresspeople[congressperson_label]
-    ticker_label = reverse_tickers[ticker_lable]
+def get_subgraph(G, source_nodes, max_hops):
+    subgraph_nodes = set(source_nodes)
+    for _ in range(max_hops):
+        neighbors = set()
+        for node in subgraph_nodes:
+            neighbors |= set(G.neighbors(node))
+        subgraph_nodes |= neighbors
+    return G.subgraph(subgraph_nodes)
+
+def draw_subgraph(subgraph, node_colors, title=None):
+    pos = nx.spring_layout(subgraph, seed=42)
+    for node_type, color in node_colors.items():
+        nx.draw(subgraph,
+                pos,
+                nodelist=[n for n in subgraph.nodes if subgraph.nodes[n]['node_type'] == node_type],
+                node_color=color,
+                label=node_type)
+
+    nx.draw_networkx_labels(subgraph, pos, labels={n: n for n in subgraph.nodes}, font_size=10)
+    # nx.draw_networkx_edge_labels(subgraph, pos, edge_labels={(u, v): d['key'] for u, v, d in subgraph.edges(data=True)})
+    plt.legend()
+    if title:
+        plt.title(title)
+    plt.show()
+
+
+node_colors = {
+    'ticker': 'red',
+    'congressperson': 'blue',
+    'committee': 'green',
+    'bill': 'orange',
+    'naics': 'purple'
+}
+
+for congressperson_label, ticker_label in results.keys():
+    print(congressperson_label, ticker_label)
+    congressperson_id = reverse_congresspeople[congressperson_label]
+    ticker_id = reverse_tickers[ticker_label]
+
+    # read the node masks
+    node_masks = results[(congressperson_label, ticker_label)]['node_masks']
+    # read the edge masks
+    edge_masks = results[(congressperson_label, ticker_label)]['edge_masks']
+
+    source_nodes = [congressperson_id, ticker_id]
+    subgraph = get_subgraph(loaded_G, source_nodes, max_hops=1)    
+
+    title = f"Subgraph for {congressperson_label} and {ticker_label}"
+    draw_subgraph(subgraph, node_colors, title=title)
+
     pass
 pass
 
