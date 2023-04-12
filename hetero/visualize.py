@@ -45,12 +45,21 @@ reverse_committees = {v: k for k, v in unique_committees.items()}
 reverse_bills = {v: k for k, v in unique_bills.items()}
 reverse_naics = {v: k for k, v in unique_naics.items()}
 
+
 # Collect edge_types 
 edge_types = []
 # Convert edge_index tensors to integer type (torch.long)
 for edge_type, edge_index in data.edge_index_dict.items():
     data.edge_index_dict[edge_type] = edge_index.to(torch.long)
     edge_types.append(edge_type)
+
+edge_index_dicts = {}
+
+for edge_type in edge_types:
+    edge_indices = data.edge_index_dict[edge_type]
+    edge_index_dict = {(src.item(), dest.item()): i for i, (src, dest) in enumerate(edge_indices.t())}
+    edge_index_dicts[edge_type] = edge_index_dict
+
 
 print("Edge types:", edge_types)
 print(len(edge_types))
@@ -141,41 +150,72 @@ with open("node_edge_masks_results.pkl", "rb") as f:
     results = pickle.load(f)
 
 
-def get_subgraph(G, source_nodes, max_hops, filter_start_date, filter_end_date):
-    subgraph_nodes = set(source_nodes)
-    for _ in range(max_hops):
-        neighbors = set()
-        for node in subgraph_nodes:
-            for neighbor, edge_data in G[node].items():
-                for edge_key, edge_attributes in edge_data.items():
-                    if filter_start_date <= edge_attributes["start_date"] and edge_attributes['end_date'] <= filter_end_date:
-                        neighbors.add(neighbor)
-        subgraph_nodes |= neighbors
+semantic_to_integer_index = {
+    'ticker': unique_tickers,
+    'congressperson': unique_congresspeople,
+    'committee': unique_committees,
+    'bill': unique_bills,
+    'naics': unique_naics
+}
+
+
+# Add a function to get the edge_mask index from edge_type
+def get_edge_mask_index(edge_type, edge_types):
+    return edge_types.index(edge_type)
+
+# Update the get_subgraph function
+def get_subgraph(G, source_nodes, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types):
+    source_nodes_pass_threshold = set()
+
+    for node in source_nodes: # source node is [congressperson, ticker]
+        node_type = G.nodes[node]['node_type']
+        
+        if node_masks[node_type][semantic_to_integer_index[node_type][node]] > node_mask_threshold:
+            source_nodes_pass_threshold.add(node)
+
+    connected_nodes_pass_threshold = set()
+
+    for node in source_nodes_pass_threshold:
+        for neighbor, edge_data in G[node].items():
+            node_type = G.nodes[node]['node_type']
+            neighbor_type = G.nodes[neighbor]['node_type']
+            src_idx = semantic_to_integer_index[node_type][node]
+            dst_idx = semantic_to_integer_index[neighbor_type][neighbor]
+
+            if node_masks[neighbor_type][semantic_to_integer_index[neighbor_type][neighbor]] > node_mask_threshold:
+                for edge_type, edge_attributes in edge_data.items():
+                    try:
+                        edge_mask_idx = edge_index_dicts[edge_type][(src_idx, dst_idx)]
+                        pass
+                    except KeyError:
+                        edge_mask_idx = edge_index_dicts[edge_type][(dst_idx, src_idx)]
+                        pass
+                    if edge_masks[edge_type][edge_mask_idx] > edge_mask_threshold:
+                        connected_nodes_pass_threshold.add(neighbor)
+
+    subgraph_nodes = source_nodes_pass_threshold | connected_nodes_pass_threshold
     return G.subgraph(subgraph_nodes)
+
 
 def draw_subgraph(subgraph, node_colors, title=None):
     pos = nx.spring_layout(subgraph, seed=42)
     
-    # Create an empty list for node legends
     node_legends = []
-
     for node_type, color in node_colors.items():
         nx.draw(subgraph,
                 pos,
                 nodelist=[n for n in subgraph.nodes if subgraph.nodes[n]['node_type'] == node_type],
                 node_color=color,
                 label=node_type)
-        # Append a Line2D object for each node_type to the node_legends list
         node_legends.append(plt.Line2D([], [], color=color, marker='o', linestyle='', label=node_type))
         
-    nx.draw_networkx_labels(subgraph, pos, labels={n: n for n in subgraph.nodes}, font_size=10)
-    # nx.draw_networkx_edge_labels(subgraph, pos, edge_labels={(u, v): d['key'] for u, v, d in subgraph.edges(data=True)})
-    if title:
-        plt.title(title)
-    
-    # Add the node_legends list to the legend
+    nx.draw_networkx_labels(subgraph, pos, labels={n: n for n in subgraph.nodes})
+
+    plt.title(title)    
     plt.legend(handles=node_legends)
     plt.show()
+    pass
+
 
 node_colors = {
     'ticker': 'red',
@@ -199,18 +239,16 @@ for congressperson_label, ticker_label in results.keys():
     sale_purchase_edges = loaded_G.get_edge_data(congressperson_id, ticker_id)
 
     if sale_purchase_edges is not None:
-        # Filter only the edges with start_date between the desired range
-        filter_months = 12
-        for edge_key, edge_attributes in sale_purchase_edges.items():
-            filter_start_date = edge_attributes["start_date"] - timedelta(days=filter_months*30)
-            filter_end_date = edge_attributes["start_date"] + timedelta(days=filter_months*30)
+        # Add the following inside the loop that iterates over results.keys()
+        node_mask_threshold = 0.5
+        edge_mask_threshold = 0.5
+        node_masks = results[(congressperson_label, ticker_label)]['node_masks']
 
-            source_nodes = [congressperson_id, ticker_id]
-            subgraph = get_subgraph(loaded_G, source_nodes, max_hops=2, filter_start_date=filter_start_date, filter_end_date=filter_end_date)
-
-            title = f"Subgraph for {congressperson_label} and {ticker_label} (Filtered)"
-            draw_subgraph(subgraph, node_colors, title=title)
-    pass
-pass
+        source_nodes = [congressperson_id, ticker_id]
+        print(source_nodes)
+        subgraph = get_subgraph(loaded_G, source_nodes, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types)
+        title = f"Subgraph for {congressperson_label} and {ticker_label} (Filtered)"
+        draw_subgraph(subgraph, node_colors, title=title)
+        pass
 
 
