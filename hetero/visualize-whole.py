@@ -244,7 +244,7 @@ node_colors = {
     'naics': 'purple'
 }
 
-def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes):
+def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes, reference_date):
     thresholded_nodes = set()
     thresholded_edges = set()
 
@@ -257,7 +257,20 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
         thresholded_nodes.add(node_label)
 
     for edge_type, edge_mask in edge_masks.items():
-        edge_indices = np.where(edge_mask > edge_mask_threshold)[0]
+        edge_attr = data[edge_type].edge_attr
+        edge_indices_date = np.where(edge_attr[:, 0] < reference_date)[0] # start date should be "earlier" than reference date
+        edge_indices_mask = np.where(edge_mask > edge_mask_threshold)[0]
+
+        # Assuming edge_indices_with_date and edge_indices are already defined
+        set_indices_date = set(edge_indices_date)
+        set_indices_mask = set(edge_indices_mask)
+
+        # Union of the two sets
+        merged_indices_set = set_indices_date.intersection(set_indices_mask)
+
+        # Convert the merged set back into a NumPy array
+        edge_indices = np.array(list(merged_indices_set))
+
         src_dst_pairs = [edge for edge, idx in edge_index_dicts[edge_type].items() if idx in edge_indices]
         thresholded_edges.update([(integer_to_semantic_index[edge_type[0]][src], integer_to_semantic_index[edge_type[2]][dst], edge_type) for src, dst in src_dst_pairs])
 
@@ -295,8 +308,18 @@ shapes = {
 
 
 for congressperson_label, ticker_label in results.keys():
+
+    target_edge_idx = edge_index_dicts[('congressperson', 'buy-sell', 'ticker')][(congressperson_label, ticker_label)]
+    target_edge_attr = data[('congressperson', 'buy-sell', 'ticker')].edge_attr[target_edge_idx]
+
+    print("transaction date: ", target_edge_attr[0])
+
+    # make a reference date that we discard all the edges before then (particualry, all edges end date before then)
+    # look_back = 365
+    reference_date = target_edge_attr[0]
+
     print(congressperson_label, ticker_label)
-    congressperson_id = reverse_congresspeople[congressperson_label]
+    congressperson_id = reverse_congresspeople[congressperson_label] # id is semantic label
     ticker_id = reverse_tickers[ticker_label]
 
     # Read the node masks
@@ -313,7 +336,7 @@ for congressperson_label, ticker_label in results.keys():
 
     target_nodes = [congressperson_label, ticker_label]
 
-    subgraph = get_thresholded_subgraph(loaded_G, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes)
+    subgraph = get_thresholded_subgraph(loaded_G, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes, reference_date)
     title = f"Subgraph for {congressperson} and {ticker}"
     draw_subgraph(subgraph, node_colors, shapes, title=title, congressperson_label=congressperson, ticker_label=ticker)
     pass
