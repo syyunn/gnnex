@@ -175,6 +175,20 @@ for which_edge in tqdm(which_edges):
         index = None
     )
 
+    ### Check memory usage
+    import subprocess
+
+    def get_nvidia_smi_output():
+        try:
+            result = subprocess.run(["nvidia-smi"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            return result.stdout
+        except FileNotFoundError:
+            return "nvidia-smi command not found. Please make sure you have NVIDIA GPU and drivers installed."
+
+    nvidia_smi_output = get_nvidia_smi_output()
+    print(nvidia_smi_output)
+    ###
+
     print("Node masks:", node_masks)
     print("Edge masks:", edge_masks)
 
