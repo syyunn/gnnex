@@ -50,6 +50,8 @@ for edge_type, edge_index in data.edge_index_dict.items():
 print("Edge types:", edge_types)
 print(len(edge_types))
 
+model_edge_types = [edge_type for edge_type in edge_types if edge_type not in [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson")]]
+
 # Given the HeteroData object named 'data'
 num_nodes_dict = {node_type: data[node_type].num_nodes for node_type in data.node_types}
 # Print the num_nodes_dict
@@ -71,12 +73,14 @@ model = BuySellLinkPrediction(
     embedding_dim=embedding_dim,
     num_edge_features=num_edge_features,
     out_channels=out_channels,
-    edge_types=edge_types,
+    # edge_types=edge_types,
+    edge_types=model_edge_types,
     num_layers=num_layers,
 ).to(device)
 
 # Load the model state
-model_path = "buysell_link_prediction_best_model.pt"
+# model_path = "buysell_link_prediction_best_model.pt"
+model_path = "buysell_link_prediction_best_model_accu_0.9990783410138249.pt"
 model.load_state_dict(torch.load(model_path, map_location=device))
 
 ### Get target as preds
@@ -131,7 +135,8 @@ model_no_embedding = BuySellLinkPredictionNoEmbedding(
     embedding_dim=embedding_dim,
     num_edge_features=num_edge_features,
     out_channels=out_channels,
-    edge_types=edge_types,
+    # edge_types=edge_types,
+    edge_types=model_edge_types,
     num_layers=num_layers,
 ).to(device)
 

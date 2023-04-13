@@ -18,8 +18,8 @@ import torch
 #     torch.backends.cudnn.benchmark = False
 
 # Open the file in binary read mode and unpickle the data
-with open('/home/gridsan/syun/gnnex/data/hetero_graph_data.pkl', "rb") as f:
-# with open('./data/hetero_graph_data.pkl', "rb") as f:
+# with open('/home/gridsan/syun/gnnex/data/hetero_graph_data.pkl', "rb") as f:
+with open('./data/hetero_graph_data.pkl', "rb") as f:
     loaded_data = pickle.load(f)
 
 # Extract the data from the loaded dictionary
