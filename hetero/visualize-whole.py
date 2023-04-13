@@ -252,9 +252,9 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
         node_indices = np.where(node_mask > node_mask_threshold)[0]
         thresholded_nodes.update([integer_to_semantic_index[node_type][i] for i in node_indices])
 
-    # Add target nodes to the set
-    for node_label in target_nodes:
-        thresholded_nodes.add(node_label)
+    # # Add target nodes to the set
+    # for node_label in target_nodes:
+    #     thresholded_nodes.add(node_label)
 
     for edge_type, edge_mask in edge_masks.items():
         edge_attr = data[edge_type].edge_attr
@@ -334,9 +334,17 @@ for congressperson_label, ticker_label in results.keys():
     congressperson = integer_to_semantic_index['congressperson'][congressperson_label]
     ticker = integer_to_semantic_index['ticker'][ticker_label]
 
+    print(f"Congressperson: {congressperson}")
+    print(f"Ticker: {ticker}")
+
     target_nodes = [congressperson_label, ticker_label]
 
     subgraph = get_thresholded_subgraph(loaded_G, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes, reference_date)
+
+    # find largest connected component
+    largest_connected_comp = max(nx.connected_components(subgraph), key=len)
+    subgraph = subgraph.subgraph(largest_connected_comp)
+
     title = f"Subgraph for {congressperson} and {ticker}"
     draw_subgraph(subgraph, node_colors, shapes, title=title, congressperson_label=congressperson, ticker_label=ticker)
     pass
