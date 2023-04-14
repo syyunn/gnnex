@@ -162,12 +162,13 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
         today = date.today()
         total_days = (today - start_date).days
 
-        edge_attr = data.edge_attr_dict[('congressperson', 'buy-sell', 'ticker')][which_edge]
-        edge_attr = torch.tensor(edge_attr/total_days, dtype=torch.float, device=device)
+        edge_attr_before_scaled = data.edge_attr_dict[('congressperson', 'buy-sell', 'ticker')][which_edge]
+        raw_attr = edge_attr_before_scaled[0]
+        print("Raw attr: ", raw_attr)
+
+        edge_attr = torch.tensor(edge_attr_before_scaled/total_days, dtype=torch.float, device=device)
         print("Edge label attribute: ", edge_attr)
 
-        raw_attr = edge_attr[0]
-        print("Raw attr: ", raw_attr)
 
         # Prepare the input data for the model
         x_dict = {node_type: data[node_type].node_id for node_type in num_nodes_dict.keys()}
