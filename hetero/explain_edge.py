@@ -152,6 +152,9 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
         results = {}
         congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
         edge_label_index = torch.stack([congressperson_id, ticker_id], dim=0)
+        print("Congressperson ID: ", congressperson_id)
+        print("Ticker ID: ", ticker_id)
+        print("Edge label index: ", edge_label_index)
 
         # date scaling
         from datetime import date
@@ -165,6 +168,7 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
         print("Edge label attribute: ", edge_attr)
 
         raw_attr = edge_attr[0]
+        print("Raw attr: ", raw_attr)
 
         # Prepare the input data for the model
         x_dict = {node_type: data[node_type].node_id for node_type in num_nodes_dict.keys()}
