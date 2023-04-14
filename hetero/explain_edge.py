@@ -161,45 +161,52 @@ explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, devi
 which_edges = [i for i in range(data[('congressperson', 'buy-sell', 'ticker')]['edge_index'].shape[1])]
 
 results = {}
+already_done = 8
+if already_done > 0:
+    with open(f"node_edge_masks_results_{already_done}_{l1_lambda}_new_new.pkl", "rb") as f:
+        results = pickle.load(f)
 for idx, which_edge in tqdm(enumerate(which_edges)):
-    congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
+    if idx <= already_done: 
+        continue
+    else:
+        congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
 
-    edge_to_explain = torch.tensor([congressperson_id, ticker_id], device=device)  # Replace with your edge of interest
-    edge_type_to_explain = ("congressperson", "buy-sell", "ticker")
+        edge_to_explain = torch.tensor([congressperson_id, ticker_id], device=device)  # Replace with your edge of interest
+        edge_type_to_explain = ("congressperson", "buy-sell", "ticker")
 
-    # Run the explain_edge method
-    node_masks, edge_masks = explainer(
-        model = model_no_embedding,
-        x_dict = embedding_dict,
-        edge_index_dict = data.edge_index_dict,
-        target = target,
-        index = None
-    )
+        # Run the explain_edge method
+        node_masks, edge_masks = explainer(
+            model = model_no_embedding,
+            x_dict = embedding_dict,
+            edge_index_dict = data.edge_index_dict,
+            target = target,
+            index = None
+        )
 
-    ### Check memory usage
-    import subprocess
+        ### Check memory usage
+        import subprocess
 
-    def get_nvidia_smi_output():
-        try:
-            result = subprocess.run(["nvidia-smi"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            return result.stdout
-        except FileNotFoundError:
-            return "nvidia-smi command not found. Please make sure you have NVIDIA GPU and drivers installed."
+        def get_nvidia_smi_output():
+            try:
+                result = subprocess.run(["nvidia-smi"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                return result.stdout
+            except FileNotFoundError:
+                return "nvidia-smi command not found. Please make sure you have NVIDIA GPU and drivers installed."
 
-    nvidia_smi_output = get_nvidia_smi_output()
-    # print(nvidnode_edge_masks_results_3_10.pkla_smi_output)
-    ###
+        nvidia_smi_output = get_nvidia_smi_output()
+        # print(nvidnode_edge_masks_results_3_10.pkla_smi_output)
+        ###
 
-    print("Node masks:", node_masks)
-    print("Edge masks:", edge_masks)
+        print("Node masks:", node_masks)
+        print("Edge masks:", edge_masks)
 
-    results[(congressperson_id.item(), ticker_id.item())] = {
-        'node_masks': {k: v.cpu().detach().numpy() for k, v in node_masks[1].items()},
-        'edge_masks': {k: v.cpu().detach().numpy() for k, v in edge_masks[1].items()},
-    }
+        results[(congressperson_id.item(), ticker_id.item())] = {
+            'node_masks': {k: v.cpu().detach().numpy() for k, v in node_masks[1].items()},
+            'edge_masks': {k: v.cpu().detach().numpy() for k, v in edge_masks[1].items()},
+        }
 
-    with open(f"node_edge_masks_results_{idx}_{l1_lambda}_new_new.pkl", "wb") as f:
-        pickle.dump(results, f)
+        with open(f"node_edge_masks_results_{idx}_{l1_lambda}_new_new.pkl", "wb") as f:
+            pickle.dump(results, f)
 
 
     # For debug purposes
