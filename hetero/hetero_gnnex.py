@@ -354,7 +354,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
                 loss += self.coeffs[key] * self.edge_mask_dict[key].sigmoid().sum()
 
         # Add L1 regularization - this is for sparse explanability
-        l1_regularization = torch.tensor(0.0, device=y.device)
+        l1_regularization = torch.tensor(0.0, device=self.device)
         for param in self.parameters():
             l1_regularization += torch.norm(param, 1)
         loss += l1_lambda * l1_regularization
