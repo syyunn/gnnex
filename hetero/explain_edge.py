@@ -116,7 +116,6 @@ model_no_embedding.load_state_dict(state_dict_no_embeddings)
 epochs = 200
 lr = 10
 l1_lambda = 0.1
-explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr, l1_lambda=l1_lambda)
 
 # Prepare the edge of interest
 which_edges = [i for i in range(data[('congressperson', 'buy-sell', 'ticker')]['edge_index'].shape[1])]
@@ -189,6 +188,8 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
         edge_type_to_explain = ("congressperson", "buy-sell", "ticker")
 
         # Run the explain_edge method
+        explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr, l1_lambda=l1_lambda)
+
         node_masks, edge_masks = explainer(
             model = model_no_embedding,
             x_dict = embedding_dict,
