@@ -19,6 +19,35 @@ with open('./data/hetero_graph_data.pkl', "rb") as f:
 
 # Extract the data from the loaded dictionary
 data = loaded_data["hetero_graph"]
+
+## Check min and max of edge_attr
+# import matplotlib.pyplot as plt
+# import numpy as np
+# attrs = data[('congressperson', 'buy-sell', 'ticker')].edge_attr[:, 0]
+# unique, counts = np.unique(attrs, return_counts=True)
+# # Remove frequencies less than 10
+# mask = counts >= 10
+# unique = unique[mask]
+# counts = counts[mask]
+
+# # Plot the frequency distribution as a bar chart
+# plt.bar(unique, counts)
+
+# # Set labels for the x and y axis
+# plt.xlabel('Integers')
+# plt.ylabel('Frequency')
+
+# x_min, x_max = plt.xlim()
+
+# # Print the minimum and maximum values of the x-axis
+# print('Minimum value of x-axis:', x_min)
+# print('Maximum value of x-axis:', x_max)
+
+# # Show the plot
+# plt.show()
+### 
+pass
+
 unique_tickers = loaded_data["unique_tickers"]
 unique_congresspeople = loaded_data["unique_congresspeople"]
 unique_committees = loaded_data["unique_committees"]
