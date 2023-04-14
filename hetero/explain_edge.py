@@ -160,15 +160,12 @@ explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, devi
 # Prepare the edge of interest
 which_edges = [i for i in range(data[('congressperson', 'buy-sell', 'ticker')]['edge_index'].shape[1])]
 
-results = {}
-already_done = 8
-if already_done > 0:
-    with open(f"node_edge_masks_results_{already_done}_{l1_lambda}_new_new.pkl", "rb") as f:
-        results = pickle.load(f)
+already_done = 0
 for idx, which_edge in tqdm(enumerate(which_edges)):
     if idx <= already_done: 
         continue
     else:
+        results = {}
         congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
 
         edge_to_explain = torch.tensor([congressperson_id, ticker_id], device=device)  # Replace with your edge of interest
@@ -205,7 +202,7 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
             'edge_masks': {k: v.cpu().detach().numpy() for k, v in edge_masks[1].items()},
         }
 
-        with open(f"node_edge_masks_results_{idx}_{l1_lambda}_new_new.pkl", "wb") as f:
+        with open(f"exp/results/node_edge_masks_results_{idx}_{l1_lambda}_new_new.pkl", "wb") as f:
             pickle.dump(results, f)
 
 
