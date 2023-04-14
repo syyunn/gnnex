@@ -147,7 +147,7 @@ print('MultiGraph G has been unpickled from', pickle_file)
 import pickle
 
 # with open("node_edge_masks_results.pkl", "rb") as f:
-with open("exp/trans_edge_not_included/node_edge_masks_results_3_10.pkl", "rb") as f:
+with open("exp/trans_edge_not_included/node_edge_masks_results_4_0.1_new_new.pkl", "rb") as f:
     results = pickle.load(f)
 
 
@@ -281,14 +281,20 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
     # Create a new MultiGraph to store the filtered subgraph
     subgraph = nx.MultiGraph()
 
-    # Add filtered nodes
-    for n, d in subgraph_nodes.nodes(data=True):
-        subgraph.add_node(n, **d)
+    # # Add filtered nodes
+    # for n, d in subgraph_nodes.nodes(data=True):
+    #     subgraph.add_node(n, **d)
 
     # Add filtered edges
     for src, dst, edge_type in thresholded_edges:
         edge_data = G[src][dst][edge_type]
         subgraph.add_edge(src, dst, key=edge_type, **edge_data)
+
+        # Add the src and dst nodes with their attributes
+        src_node_data = G.nodes[src]
+        dst_node_data = G.nodes[dst]
+        subgraph.add_node(src, **src_node_data)
+        subgraph.add_node(dst, **dst_node_data)
 
     return subgraph
 
@@ -320,6 +326,14 @@ for congressperson_label, ticker_label in results.keys():
     # look_back = 365
     reference_date = target_edge_attr[0]
 
+    # Convert the reference date to a datetime object
+    import datetime
+    start_date = datetime.datetime(2016, 1, 1)
+    ref_date = start_date + datetime.timedelta(days=reference_date.item())
+
+    # Convert the datetime object to a string in the format "YYYY-xx-xx"
+    ref_date_str = ref_date.strftime("%Y-%m-%d")
+
     print(congressperson_label, ticker_label)
     congressperson_id = reverse_congresspeople[congressperson_label] # id is semantic label
     ticker_id = reverse_tickers[ticker_label]
@@ -328,6 +342,36 @@ for congressperson_label, ticker_label in results.keys():
     node_masks = results[(congressperson_label, ticker_label)]['node_masks']
     # Read the edge masks
     edge_masks = results[(congressperson_label, ticker_label)]['edge_masks']
+
+
+    #### Check Sparsity ####
+    import numpy as np
+
+    # Assuming node_masks and edge_masks are the dictionaries with key-value pairs
+
+    # Count the number of 0s and 1s in the node masks
+    num_node_zeros = sum([np.count_nonzero(mask == 0) for mask in node_masks.values()])
+    num_node_ones = sum([np.count_nonzero(mask == 1) for mask in node_masks.values()])
+
+    # Count the number of 0s and 1s in the edge masks
+    num_edge_zeros = sum([np.count_nonzero(mask == 0) for mask in edge_masks.values()])
+    num_edge_ones = sum([np.count_nonzero(mask == 1) for mask in edge_masks.values()])
+
+    # Count the number of non-zero and non-one values in the node masks
+    num_node_nonzero = sum([np.count_nonzero((mask != 0) & (mask != 1)) for mask in node_masks.values()])
+
+    # Count the number of non-zero and non-one values in the edge masks
+    num_edge_nonzero = sum([np.count_nonzero((mask != 0) & (mask != 1)) for mask in edge_masks.values()])
+
+    # Print the counts
+    print("Number of 0s in node masks:", num_node_zeros)
+    print("Number of 1s in node masks:", num_node_ones)
+    print("Number of non-zero and non-one values in node masks:", num_node_nonzero)
+
+    print("Number of 0s in edge masks:", num_edge_zeros)
+    print("Number of 1s in edge masks:", num_edge_ones)
+    print("Number of non-zero and non-one values in edge masks:", num_edge_nonzero)
+    ####
 
     allow = 1
 
@@ -362,7 +406,7 @@ for congressperson_label, ticker_label in results.keys():
     # nodes_to_include = set().union(*connected_components)
     # subgraph = subgraph.subgraph(nodes_to_include)
 
-    title = f"Subgraph for {congressperson} and {ticker}"
+    title = f"Subgraph for {congressperson} and {ticker} on {ref_date_str}"
     draw_subgraph(subgraph, node_colors, shapes, title=title, congressperson_label=congressperson, ticker_label=ticker)
     pass
 
