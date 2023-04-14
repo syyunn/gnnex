@@ -147,7 +147,7 @@ print('MultiGraph G has been unpickled from', pickle_file)
 import pickle
 
 # with open("node_edge_masks_results.pkl", "rb") as f:
-with open("exp/trans_edge_not_included/node_edge_masks_results_56.pkl", "rb") as f:
+with open("exp/trans_edge_not_included/node_edge_masks_results_5_0.01.pkl", "rb") as f:
     results = pickle.load(f)
 
 
@@ -355,12 +355,12 @@ for congressperson_label, ticker_label in results.keys():
     # largest_connected_comp = max(nx.connected_components(subgraph), key=len)
     # subgraph = subgraph.subgraph(largest_connected_comp)
 
-    # Get connected components with at least 3 nodes
-    connected_components = [comp for comp in nx.connected_components(subgraph) if (len(comp)>=1)]
+    # # Get connected components with at least 3 nodes
+    # connected_components = [comp for comp in nx.connected_components(subgraph) if (len(comp)>=1)]
 
-    # Combine the connected components to form the final subgraph
-    nodes_to_include = set().union(*connected_components)
-    subgraph = subgraph.subgraph(nodes_to_include)
+    # # Combine the connected components to form the final subgraph
+    # nodes_to_include = set().union(*connected_components)
+    # subgraph = subgraph.subgraph(nodes_to_include)
 
     title = f"Subgraph for {congressperson} and {ticker}"
     draw_subgraph(subgraph, node_colors, shapes, title=title, congressperson_label=congressperson, ticker_label=ticker)
