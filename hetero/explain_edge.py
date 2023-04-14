@@ -172,11 +172,18 @@ result_files = os.listdir(results_directory)
 idx_values = [int(re.findall(r'\d+', file)[0]) for file in result_files if "node_edge_masks_results" in file]
 
 if idx_values:
-    already_done = np.min(np.setdiff1d(range(max(idx_values) + 1), idx_values))
+    idx_values.sort()
+    for i, val in enumerate(idx_values):
+        if i != val:
+            already_done = i
+            break
+    else:
+        already_done = max(idx_values) + 1
 else:
     already_done = 0
 
-print("Already done:", already_done)
+print(f"Starting from idx: {already_done}")
+
 for idx, which_edge in tqdm(enumerate(which_edges)):
     if idx <= already_done: 
         continue
