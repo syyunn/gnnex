@@ -196,7 +196,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
                 y_hat, y = y_hat[index], y[index]
             
             loss = self._loss(y_hat, y, self.l1_lambda)
-            # print("loss", loss)
+            print("loss", loss)
 
             loss.backward()
             optimizer.step()
