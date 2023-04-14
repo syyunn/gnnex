@@ -80,7 +80,7 @@ model = BuySellLinkPrediction(
 
 # Load the model state
 # model_path = "buysell_link_prediction_best_model.pt"
-model_path = "buysell_link_prediction_best_model_accu_0.9990783410138249.pt"
+model_path = "exp/trans_edge_not_included/buysell_link_prediction_best_model_accu_0.9889400921658986_new.pt"
 model.load_state_dict(torch.load(model_path, map_location=device))
 
 ### Get target as preds
