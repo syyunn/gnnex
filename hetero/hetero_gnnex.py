@@ -206,7 +206,6 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
 
             loss.backward()
             optimizer.step()
-
             scheduler.step()
 
             if i == 0:
@@ -361,8 +360,15 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
 
         # Add L1 regularization - this is for sparse explanability
         l1_regularization = torch.tensor(0.0, device=self.device)
-        for param in self.parameters():
+        
+        # Apply L1 regularization only on node_mask_dict and edge_mask_dict
+        for _, param in self.node_mask_dict.items():
             l1_regularization += torch.norm(param, 1)
+
+        for _, param in self.edge_mask_dict.items():
+            l1_regularization += torch.norm(param, 1)
+
         loss += l1_lambda * l1_regularization
 
-        return loss    
+        return loss
+
