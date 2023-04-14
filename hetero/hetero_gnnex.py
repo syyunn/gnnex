@@ -161,9 +161,12 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             elif epoch < 30:
                 print("lr: ", 0.1)
                 return 0.1
-            else:
+            elif epoch < 50:
                 print("lr: ", 0.01)
                 return 0.01
+            else:
+                print("lr: ", 0.001)
+                return 0.001
 
         # Set up the optimizer
         optimizer = torch.optim.Adam(parameters, lr=self.lr) # this means we're udpating this edge/node_mask dict only.
