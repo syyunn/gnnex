@@ -146,11 +146,6 @@ print('MultiGraph G has been unpickled from', pickle_file)
 
 import pickle
 
-# with open("node_edge_masks_results.pkl", "rb") as f:
-with open("exp/trans_edge_not_included/node_edge_masks_results_8_0.1_new_new.pkl", "rb") as f:
-    results = pickle.load(f)
-
-
 semantic_to_integer_index = {
     'ticker': unique_tickers,
     'congressperson': unique_congresspeople,
@@ -257,11 +252,12 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
         edge_attr = data[edge_type].edge_attr
 
         if edge_type == ('ticker', 'classified', 'naics') or edge_type == ('naics', 'rev_classified', 'ticker'):
-            edge_indices_mask = np.where(edge_mask > edge_mask_threshold[edge_type])[0]
+            edge_indices_mask = np.where(edge_mask >= edge_mask_threshold[edge_type])[0]
             edge_indices = edge_indices_mask
-        else:              
+        else:
+            look_back = 365              
             # edge_indices_date = np.where(edge_attr[:, 0] < reference_date)[0] # start date should be "earlier" than reference date
-            edge_indices_date = np.where((edge_attr[:, 0] >= (reference_date - 365)) & (edge_attr[:, 0] < reference_date))[0]
+            edge_indices_date = np.where((edge_attr[:, 0] >= (reference_date - look_back)) & (edge_attr[:, 0] <= reference_date))[0]
             edge_indices_mask = np.where(edge_mask >= edge_mask_threshold[edge_type])[0]
 
             # Assuming edge_indices_with_date and edge_indices are already defined
@@ -356,24 +352,29 @@ folder_path = "exp/trans_edge_not_included/results"
 pkl_files = [f for f in os.listdir(folder_path) if f.endswith('.pkl')]
 
 for pkl_file in pkl_files:
+    print("pkl file: ", pkl_file)
+    # with open("node_edge_masks_results.pkl", "rb") as f:
+    with open(os.path.join(folder_path, pkl_file), "rb") as f:
+        results = pickle.load(f)
+
     # extract the integer after "results_" in the filename
-    which_edge = int(pkl_file.split("_")[4])
+    congressperson_label = int(pkl_file.split("_")[7])
+    ticker_label = int(pkl_file.split("_")[9])
+    target_edge_attr = int(pkl_file.split("_")[10].replace("attr", '').split('.')[0])
+    print("target edge attr: ", target_edge_attr)
 
-    congressperson_label, ticker_label = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
-
-    target_edge_idx = edge_index_dicts[('congressperson', 'buy-sell', 'ticker')][(congressperson_label, ticker_label)]
-    target_edge_attr = data[('congressperson', 'buy-sell', 'ticker')].edge_attr[target_edge_idx]
-
-    print("transaction date: ", target_edge_attr[0])
+    # target_edge_idx = edge_index_dicts[('congressperson', 'buy-sell', 'ticker')][(congressperson_label, ticker_label)]
+    # target_edge_attr = data[('congressperson', 'buy-sell', 'ticker')].edge_attr[target_edge_idx]
 
     # make a reference date that we discard all the edges before then (particualry, all edges end date before then)
     # look_back = 365
-    reference_date = target_edge_attr[0]
+
+    reference_date = target_edge_attr
 
     # Convert the reference date to a datetime object
     import datetime
     start_date = datetime.datetime(2016, 1, 1)
-    ref_date = start_date + datetime.timedelta(days=reference_date.item())
+    ref_date = start_date + datetime.timedelta(days=reference_date)
 
     # Convert the datetime object to a string in the format "YYYY-xx-xx"
     ref_date_str = ref_date.strftime("%Y-%m-%d")
@@ -386,7 +387,6 @@ for pkl_file in pkl_files:
     node_masks = results[(congressperson_label, ticker_label)]['node_masks']
     # Read the edge masks
     edge_masks = results[(congressperson_label, ticker_label)]['edge_masks']
-
 
     #### Check Sparsity ####
     import numpy as np
@@ -417,13 +417,13 @@ for pkl_file in pkl_files:
     print("Number of non-zero and non-one values in edge masks:", num_edge_nonzero)
     ####
 
-    allow = 0.99999
+    allow = 1e-5
 
     # Find the maximum value for each type in node_masks and store them in a dict
-    max_node_masks = {key: max(value)*allow for key, value in node_masks.items()}
+    max_node_masks = {key: max(value) - allow for key, value in node_masks.items()}
 
     # Find the maximum value for each type in edge_masks and store them in a dict
-    max_edge_masks = {key: max(value)*allow for key, value in edge_masks.items()}
+    max_edge_masks = {key: max(value) - allow for key, value in edge_masks.items()}
 
     # # Add the following inside the loop that iterates over results.keys()
     # node_mask_threshold = 0.999
@@ -434,6 +434,7 @@ for pkl_file in pkl_files:
 
     print(f"Congressperson: {congressperson}")
     print(f"Ticker: {ticker}")
+    print(f"Reference date: {ref_date_str}")
 
     target_nodes = [congressperson, ticker]
 
@@ -446,12 +447,9 @@ for pkl_file in pkl_files:
     # Combine the connected components with the target ticker node to form the final subgraph
     nodes_to_include = set().union(*connected_components)
     subgraph = subgraph.subgraph(nodes_to_include)
-
     title = f"Subgraph for {congressperson} and {ticker} on {ref_date_str}"
     draw_subgraph(subgraph, node_colors, shapes, title=title, congressperson_label=congressperson, ticker_label=ticker)
     pass
-
-
 
     # # find largest connected component
     # largest_connected_comp = max(nx.connected_components(subgraph), key=len)
