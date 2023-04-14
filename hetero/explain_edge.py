@@ -160,7 +160,23 @@ explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, devi
 # Prepare the edge of interest
 which_edges = [i for i in range(data[('congressperson', 'buy-sell', 'ticker')]['edge_index'].shape[1])]
 
-already_done = 0
+# already_done = 0
+import os
+import re
+import numpy as np
+
+results_directory = "exp/results"
+result_files = os.listdir(results_directory)
+
+# Extract idx values from the filenames
+idx_values = [int(re.findall(r'\d+', file)[0]) for file in result_files if "node_edge_masks_results" in file]
+
+if idx_values:
+    already_done = np.min(np.setdiff1d(range(max(idx_values) + 1), idx_values))
+else:
+    already_done = 0
+
+print("Already done:", already_done)
 for idx, which_edge in tqdm(enumerate(which_edges)):
     if idx <= already_done: 
         continue
