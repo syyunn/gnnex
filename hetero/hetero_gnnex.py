@@ -60,7 +60,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
         'EPS': 1e-15,
     }
 
-    def __init__(self, model, epochs: int = 100, lr: float = 0.1, device='cpu', data=None, edge_label_index=None, edge_label_attr=None, **kwargs):
+    def __init__(self, model, epochs: int = 100, lr: float = 0.1, device='cpu', data=None, edge_label_index=None, edge_label_attr=None, l1_lambda=None, **kwargs):
         super().__init__()
         self.edge_label_index = edge_label_index
         self.edge_label_attr = edge_label_attr
@@ -70,6 +70,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
         self.epochs = epochs
         self.lr = lr
         self.coeffs.update(kwargs)
+        self.l1_lambda = l1_lambda
 
         self.node_masks = {}
         self.hard_node_masks = {}
@@ -193,8 +194,8 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
 
             if index is not None:
                 y_hat, y = y_hat[index], y[index]
-
-            loss = self._loss(y_hat, y)
+            
+            loss = self._loss(y_hat, y, self.l1_lambda)
             # print("loss", loss)
 
             loss.backward()
@@ -342,7 +343,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
         clear_hetero_masks(model)
 
 
-    def _loss(self, y_hat: Tensor, y: Tensor) -> Tensor:
+    def _loss(self, y_hat: Tensor, y: Tensor, l1_lambda: float) -> Tensor:
         # loss = -torch.sum(y * torch.log(y_hat), dim=0).mean()
         loss = torch.mean(torch.sum((y - y_hat) ** 2, dim=0))
 
@@ -352,5 +353,10 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             if key in self.edge_mask_dict:
                 loss += self.coeffs[key] * self.edge_mask_dict[key].sigmoid().sum()
 
-        return loss
-    
+        # Add L1 regularization - this is for sparse explanability
+        l1_regularization = torch.tensor(0.0, device=y.device)
+        for param in self.parameters():
+            l1_regularization += torch.norm(param, 1)
+        loss += l1_lambda * l1_regularization
+
+        return loss    

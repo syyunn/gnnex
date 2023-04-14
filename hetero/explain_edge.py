@@ -154,7 +154,8 @@ model_no_embedding.load_state_dict(state_dict_no_embeddings)
 # Instantiate the HeteroGNNExplainer
 epochs = 100
 lr = 10
-explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr)
+l1_lambda = 0.01
+explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr, l1_lambda=l1_lambda)
 
 # Prepare the edge of interest
 which_edges = [i for i in range(data[('congressperson', 'buy-sell', 'ticker')]['edge_index'].shape[1])]
@@ -197,7 +198,7 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
         'edge_masks': {k: v.cpu().detach().numpy() for k, v in edge_masks[1].items()},
     }
 
-    with open(f"node_edge_masks_results_{idx}.pkl", "wb") as f:
+    with open(f"node_edge_masks_results_{idx}_{l1_lambda}.pkl", "wb") as f:
         pickle.dump(results, f)
 
 
