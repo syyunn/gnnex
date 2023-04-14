@@ -198,7 +198,7 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
         'edge_masks': {k: v.cpu().detach().numpy() for k, v in edge_masks[1].items()},
     }
 
-    with open(f"node_edge_masks_results_{idx}_{l1_lambda}.pkl", "wb") as f:
+    with open(f"node_edge_masks_results_{idx}_{l1_lambda}_new.pkl", "wb") as f:
         pickle.dump(results, f)
 
 
