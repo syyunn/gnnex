@@ -350,8 +350,16 @@ shapes = {
     'naics': 'v'
 }
 
+# read files in exp/trans_edge_not_included/results
+import os
+folder_path = "exp/trans_edge_not_included/results"
+pkl_files = [f for f in os.listdir(folder_path) if f.endswith('.pkl')]
 
-for congressperson_label, ticker_label in results.keys():
+for pkl_file in pkl_files:
+    # extract the integer after "results_" in the filename
+    which_edge = int(pkl_file.split("_")[4])
+
+    congressperson_label, ticker_label = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
 
     target_edge_idx = edge_index_dicts[('congressperson', 'buy-sell', 'ticker')][(congressperson_label, ticker_label)]
     target_edge_attr = data[('congressperson', 'buy-sell', 'ticker')].edge_attr[target_edge_idx]

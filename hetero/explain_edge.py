@@ -106,8 +106,9 @@ today = date.today()
 total_days = (today - start_date).days
 
 # Create edge_label_attr tensor
+raw_attr = edge_to_attr[(congressperson_id.item(), ticker_id.item())][0]
 edge_attr = torch.tensor(edge_to_attr[(congressperson_id.item(), ticker_id.item())]/total_days, dtype=torch.float, device=device)
-print("Edge label attribute:", edge_attr)
+print("Edge label attribute: ", edge_attr)
 # Prepare the input data for the model
 x_dict = {node_type: data[node_type].node_id for node_type in num_nodes_dict.keys()}
 
@@ -226,7 +227,7 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
             'edge_masks': {k: v.cpu().detach().numpy() for k, v in edge_masks[1].items()},
         }
 
-        with open(f"exp/results/node_edge_masks_results_{idx}_{l1_lambda}_{which_edge}_new_new.pkl", "wb") as f:
+        with open(f"exp/results/node_edge_masks_results_{idx}_{l1_lambda}_cgp_{congressperson_id}_tic_{ticker_id}_attr{raw_attr}_new_new.pkl", "wb") as f:
             pickle.dump(results, f)
 
 
