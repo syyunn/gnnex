@@ -17,6 +17,9 @@ def get_edge_attr_for_batch(data_edge_index, data_edge_attr, batch_edge_label_in
         try:
             batch_edge_attr[i] = edge_to_attr[(src.item(), dst.item())]
         except KeyError:
+            test = random.choice(range(data_edge_attr.shape[0]))
+            print("test: ", test)
+            print("data_edge_attr: ", data_edge_attr)
             batch_edge_attr[i] = data_edge_attr[random.choice(range(data_edge_attr.shape[0]))]
     
     return batch_edge_attr
