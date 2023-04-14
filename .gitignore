@@ -134,3 +134,6 @@ dmypy.json
 *.pt
 
 *.pkl
+
+# ignore DS Store
+.DS_Store
