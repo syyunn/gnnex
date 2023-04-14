@@ -154,7 +154,7 @@ model_no_embedding.load_state_dict(state_dict_no_embeddings)
 # Instantiate the HeteroGNNExplainer
 epochs = 100
 lr = 10
-l1_lambda = 10
+l1_lambda = 100
 explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr, l1_lambda=l1_lambda)
 
 # Prepare the edge of interest
@@ -187,7 +187,7 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
             return "nvidia-smi command not found. Please make sure you have NVIDIA GPU and drivers installed."
 
     nvidia_smi_output = get_nvidia_smi_output()
-    # print(nvidia_smi_output)
+    # print(nvidnode_edge_masks_results_3_10.pkla_smi_output)
     ###
 
     print("Node masks:", node_masks)

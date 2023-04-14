@@ -147,7 +147,7 @@ print('MultiGraph G has been unpickled from', pickle_file)
 import pickle
 
 # with open("node_edge_masks_results.pkl", "rb") as f:
-with open("exp/trans_edge_not_included/node_edge_masks_results_5_0.01.pkl", "rb") as f:
+with open("exp/trans_edge_not_included/node_edge_masks_results_3_10.pkl", "rb") as f:
     results = pickle.load(f)
 
 

@@ -152,13 +152,13 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
 
         # Define the learning rate scheduler function
         def custom_lr_schedule(epoch):
-            if epoch < 20:
+            if epoch < 30:
                 print("lr: ", 10)
                 return 10
-            elif epoch < 40:
+            elif epoch < 50:
                 print("lr: ", 1)
                 return 1
-            elif epoch < 60:
+            elif epoch < 70:
                 print("lr: ", 0.1)
                 return 0.1
             else:
