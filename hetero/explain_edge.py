@@ -185,7 +185,7 @@ else:
 print(f"Starting from idx: {already_done}")
 
 for idx, which_edge in tqdm(enumerate(which_edges)):
-    if idx <= already_done: 
+    if idx < already_done: 
         continue
     else:
         results = {}
