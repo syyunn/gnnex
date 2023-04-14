@@ -137,3 +137,6 @@ dmypy.json
 
 # ignore DS Store
 .DS_Store
+
+# ignore .zip
+*.zip

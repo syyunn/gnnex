@@ -87,46 +87,6 @@ model.load_state_dict(torch.load(model_path, map_location=device))
 # Evaluate the model
 model.eval()
 
-which_edge = 0
-congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
-edge_label_index = torch.stack([congressperson_id, ticker_id], dim=0)
-
-# Create a dictionary to map edge pairs to their attributes
-edge_to_attr = {}
-for key, edge_index in data.edge_index_dict.items():
-    edge_attr = data.edge_attr_dict[key]
-    for i, (src, dst) in enumerate(edge_index.t()):
-        edge_to_attr[(src.item(), dst.item())] = edge_attr[i]
-
-# date scaling
-from datetime import date
-
-start_date = date(2016, 1, 1)
-today = date.today()
-total_days = (today - start_date).days
-
-# Create edge_label_attr tensor
-raw_attr = edge_to_attr[(congressperson_id.item(), ticker_id.item())][0]
-edge_attr = torch.tensor(edge_to_attr[(congressperson_id.item(), ticker_id.item())]/total_days, dtype=torch.float, device=device)
-print("Edge label attribute: ", edge_attr)
-# Prepare the input data for the model
-x_dict = {node_type: data[node_type].node_id for node_type in num_nodes_dict.keys()}
-
-
-scaled_edge_attr_dict = {key: value / total_days for key, value in data.edge_attr_dict.items()}
-
-# Perform inference using the trained model
-with torch.no_grad():
-    # preds = model(x_dict, batch.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=batch_edge_label_attr)
-    preds, preds_before_sig = model(x_dict, data.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=edge_attr)
-
-# Print the prediction results
-# print("Prediction result:", preds.item())
-
-####
-
-target = preds_before_sig.item()
-
 # Extract the model's embeddings
 embedding_dict = model.gnn.embeddings
 
@@ -191,6 +151,34 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
     else:
         results = {}
         congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
+        edge_label_index = torch.stack([congressperson_id, ticker_id], dim=0)
+
+        # date scaling
+        from datetime import date
+
+        start_date = date(2016, 1, 1)
+        today = date.today()
+        total_days = (today - start_date).days
+
+        edge_attr = data.edge_attr_dict[('congressperson', 'buy-sell', 'ticker')][which_edge]
+        edge_attr = torch.tensor(edge_attr/total_days, dtype=torch.float, device=device)
+        print("Edge label attribute: ", edge_attr)
+
+        raw_attr = edge_attr[0]
+
+        # Prepare the input data for the model
+        x_dict = {node_type: data[node_type].node_id for node_type in num_nodes_dict.keys()}
+
+        scaled_edge_attr_dict = {key: value / total_days for key, value in data.edge_attr_dict.items()}
+
+        # Perform inference using the trained model
+        with torch.no_grad():
+            # preds = model(x_dict, batch.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=batch_edge_label_attr)
+            preds, preds_before_sig = model(x_dict, data.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=edge_attr)
+
+        target = preds_before_sig.item()
+
+        congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
         print(f"Edge: {congressperson_id.item()}, {ticker_id.item()}")
 
         edge_to_explain = torch.tensor([congressperson_id, ticker_id], device=device)  # Replace with your edge of interest
@@ -230,11 +218,6 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
         with open(f"exp/results/node_edge_masks_results_{idx}_{l1_lambda}_cgp_{congressperson_id}_tic_{ticker_id}_attr{raw_attr}_new_new.pkl", "wb") as f:
             pickle.dump(results, f)
 
-
     # For debug purposes
     # break
-
-# # Save the results to a pickle file
-# with open("node_edge_masks_results.pkl", "wb") as f:
-#     pickle.dump(results, f)
 
