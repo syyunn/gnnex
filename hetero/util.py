@@ -21,7 +21,7 @@ def get_edge_attr_for_batch(data_edge_index, data_edge_attr, batch_edge_label_in
             x_min, x_max = -846, 2779
             import numpy as np
             num_edge_features = data_edge_attr.shape[1]
-            batch_edge_attr[i] = np.random.randint(x_min, x_max+1, size=num_edge_features)
+            batch_edge_attr[i] = torch.tensor(np.random.randint(x_min, x_max+1, size=num_edge_features), dtype=torch.float32)
             # batch_edge_attr[i] = data_edge_attr[random.choice(range(data_edge_attr.shape[0]))] # this is old setting
     
     return batch_edge_attr
