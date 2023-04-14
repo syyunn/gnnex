@@ -409,7 +409,7 @@ for congressperson_label, ticker_label in results.keys():
     print("Number of non-zero and non-one values in edge masks:", num_edge_nonzero)
     ####
 
-    allow = 1
+    allow = 0.99999
 
     # Find the maximum value for each type in node_masks and store them in a dict
     max_node_masks = {key: max(value)*allow for key, value in node_masks.items()}
@@ -431,6 +431,20 @@ for congressperson_label, ticker_label in results.keys():
 
     subgraph = get_thresholded_subgraph(loaded_G, node_masks, edge_masks, max_node_masks, max_edge_masks, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes, reference_date)
 
+
+    # Get connected components with the target ticker node included
+    connected_components = [comp for comp in nx.connected_components(subgraph) if (target_nodes[1] in comp)]
+
+    # Combine the connected components with the target ticker node to form the final subgraph
+    nodes_to_include = set().union(*connected_components)
+    subgraph = subgraph.subgraph(nodes_to_include)
+
+    title = f"Subgraph for {congressperson} and {ticker} on {ref_date_str}"
+    draw_subgraph(subgraph, node_colors, shapes, title=title, congressperson_label=congressperson, ticker_label=ticker)
+    pass
+
+
+
     # # find largest connected component
     # largest_connected_comp = max(nx.connected_components(subgraph), key=len)
     # subgraph = subgraph.subgraph(largest_connected_comp)
@@ -442,7 +456,5 @@ for congressperson_label, ticker_label in results.keys():
     # nodes_to_include = set().union(*connected_components)
     # subgraph = subgraph.subgraph(nodes_to_include)
 
-    title = f"Subgraph for {congressperson} and {ticker} on {ref_date_str}"
-    draw_subgraph(subgraph, node_colors, shapes, title=title, congressperson_label=congressperson, ticker_label=ticker)
     pass
 
