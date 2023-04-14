@@ -147,7 +147,7 @@ print('MultiGraph G has been unpickled from', pickle_file)
 import pickle
 
 # with open("node_edge_masks_results.pkl", "rb") as f:
-with open("exp/trans_edge_not_included/node_edge_masks_results_4_0.1_new_new.pkl", "rb") as f:
+with open("exp/trans_edge_not_included/node_edge_masks_results_8_0.1_new_new.pkl", "rb") as f:
     results = pickle.load(f)
 
 
@@ -260,7 +260,8 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
             edge_indices_mask = np.where(edge_mask > edge_mask_threshold[edge_type])[0]
             edge_indices = edge_indices_mask
         else:              
-            edge_indices_date = np.where(edge_attr[:, 0] < reference_date)[0] # start date should be "earlier" than reference date
+            # edge_indices_date = np.where(edge_attr[:, 0] < reference_date)[0] # start date should be "earlier" than reference date
+            edge_indices_date = np.where((edge_attr[:, 0] >= (reference_date - 365)) & (edge_attr[:, 0] < reference_date))[0]
             edge_indices_mask = np.where(edge_mask >= edge_mask_threshold[edge_type])[0]
 
             # Assuming edge_indices_with_date and edge_indices are already defined
@@ -295,6 +296,41 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
         dst_node_data = G.nodes[dst]
         subgraph.add_node(src, **src_node_data)
         subgraph.add_node(dst, **dst_node_data)
+    
+    # Add target nodes with their attributes
+    for target_node in target_nodes:
+        subgraph.add_node(target_node, **G.nodes[target_node])
+
+    # Find the ticker's 1-hop 'naics' neighbor
+    ticker = target_nodes[1]
+    naics_neighbor = None
+
+    for neighbor, _ in G[ticker].items():
+        if G.nodes[neighbor]['node_type'] == 'naics':
+            naics_neighbor = neighbor
+            break
+    
+    if naics_neighbor is not None:
+        # Add the naics neighbor node with its attributes
+        subgraph.add_node(naics_neighbor, **G.nodes[naics_neighbor])
+
+        # Add the edge between ticker and naics neighbor
+        edge_data = G[ticker][naics_neighbor][('ticker', 'classified', 'naics')]
+        subgraph.add_edge(ticker, naics_neighbor, key=('ticker', 'classified', 'naics'), **edge_data)
+
+    # Add 1-hop "naics" neighbors to ticker nodes
+    naics_neighbors_to_add = []
+
+    for ticker_node in subgraph.nodes(data=True):
+        if ticker_node[1]['node_type'] == 'ticker':
+            for naics_neighbor, _ in G[ticker_node[0]].items():
+                if G.nodes[naics_neighbor]['node_type'] == 'naics':
+                    naics_neighbors_to_add.append((ticker_node[0], naics_neighbor))
+
+    for ticker_node, naics_neighbor in naics_neighbors_to_add:
+        subgraph.add_node(naics_neighbor, **G.nodes[naics_neighbor])
+        edge_data = G[ticker_node][naics_neighbor][('ticker', 'classified', 'naics')]
+        subgraph.add_edge(ticker_node, naics_neighbor, key=('ticker', 'classified', 'naics'), **edge_data)
 
     return subgraph
 
@@ -391,7 +427,7 @@ for congressperson_label, ticker_label in results.keys():
     print(f"Congressperson: {congressperson}")
     print(f"Ticker: {ticker}")
 
-    target_nodes = [congressperson_label, ticker_label]
+    target_nodes = [congressperson, ticker]
 
     subgraph = get_thresholded_subgraph(loaded_G, node_masks, edge_masks, max_node_masks, max_edge_masks, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes, reference_date)
 
