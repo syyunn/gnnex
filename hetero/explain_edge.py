@@ -187,7 +187,7 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
             return "nvidia-smi command not found. Please make sure you have NVIDIA GPU and drivers installed."
 
     nvidia_smi_output = get_nvidia_smi_output()
-    print(nvidia_smi_output)
+    # print(nvidia_smi_output)
     ###
 
     print("Node masks:", node_masks)

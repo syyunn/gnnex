@@ -146,7 +146,8 @@ print('MultiGraph G has been unpickled from', pickle_file)
 
 import pickle
 
-with open("node_edge_masks_results.pkl", "rb") as f:
+# with open("node_edge_masks_results.pkl", "rb") as f:
+with open("exp/trans_edge_not_included/node_edge_masks_results_56.pkl", "rb") as f:
     results = pickle.load(f)
 
 
@@ -165,10 +166,6 @@ integer_to_semantic_index = {
     'bill': reverse_bills,
     'naics': reverse_naics
 }
-
-# Add a function to get the edge_mask index from edge_type
-def get_edge_mask_index(edge_type, edge_types):
-    return edge_types.index(edge_type)
 
 # Update the get_subgraph function
 def get_subgraph(G, source_nodes, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types):
@@ -249,27 +246,32 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
     thresholded_edges = set()
 
     for node_type, node_mask in node_masks.items():
-        node_indices = np.where(node_mask > node_mask_threshold)[0]
+        node_indices = np.where(node_mask >= node_mask_threshold[node_type])[0]
         thresholded_nodes.update([integer_to_semantic_index[node_type][i] for i in node_indices])
-
+    
     # # Add target nodes to the set
     # for node_label in target_nodes:
     #     thresholded_nodes.add(node_label)
 
     for edge_type, edge_mask in edge_masks.items():
         edge_attr = data[edge_type].edge_attr
-        edge_indices_date = np.where(edge_attr[:, 0] < reference_date)[0] # start date should be "earlier" than reference date
-        edge_indices_mask = np.where(edge_mask > edge_mask_threshold)[0]
 
-        # Assuming edge_indices_with_date and edge_indices are already defined
-        set_indices_date = set(edge_indices_date)
-        set_indices_mask = set(edge_indices_mask)
+        if edge_type == ('ticker', 'classified', 'naics') or edge_type == ('naics', 'rev_classified', 'ticker'):
+            edge_indices_mask = np.where(edge_mask > edge_mask_threshold[edge_type])[0]
+            edge_indices = edge_indices_mask
+        else:              
+            edge_indices_date = np.where(edge_attr[:, 0] < reference_date)[0] # start date should be "earlier" than reference date
+            edge_indices_mask = np.where(edge_mask >= edge_mask_threshold[edge_type])[0]
 
-        # Union of the two sets
-        merged_indices_set = set_indices_date.intersection(set_indices_mask)
+            # Assuming edge_indices_with_date and edge_indices are already defined
+            set_indices_date = set(edge_indices_date)
+            set_indices_mask = set(edge_indices_mask)
 
-        # Convert the merged set back into a NumPy array
-        edge_indices = np.array(list(merged_indices_set))
+            # Union of the two sets
+            merged_indices_set = set_indices_date.intersection(set_indices_mask)
+
+            # Convert the merged set back into a NumPy array
+            edge_indices = np.array(list(merged_indices_set))
 
         src_dst_pairs = [edge for edge, idx in edge_index_dicts[edge_type].items() if idx in edge_indices]
         thresholded_edges.update([(integer_to_semantic_index[edge_type[0]][src], integer_to_semantic_index[edge_type[2]][dst], edge_type) for src, dst in src_dst_pairs])
@@ -327,9 +329,17 @@ for congressperson_label, ticker_label in results.keys():
     # Read the edge masks
     edge_masks = results[(congressperson_label, ticker_label)]['edge_masks']
 
-    # Add the following inside the loop that iterates over results.keys()
-    node_mask_threshold = 0.999
-    edge_mask_threshold = 0.999
+    allow = 1
+
+    # Find the maximum value for each type in node_masks and store them in a dict
+    max_node_masks = {key: max(value)*allow for key, value in node_masks.items()}
+
+    # Find the maximum value for each type in edge_masks and store them in a dict
+    max_edge_masks = {key: max(value)*allow for key, value in edge_masks.items()}
+
+    # # Add the following inside the loop that iterates over results.keys()
+    # node_mask_threshold = 0.999
+    # edge_mask_threshold = 0.999
 
     congressperson = integer_to_semantic_index['congressperson'][congressperson_label]
     ticker = integer_to_semantic_index['ticker'][ticker_label]
@@ -339,12 +349,20 @@ for congressperson_label, ticker_label in results.keys():
 
     target_nodes = [congressperson_label, ticker_label]
 
-    subgraph = get_thresholded_subgraph(loaded_G, node_masks, edge_masks, node_mask_threshold, edge_mask_threshold, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes, reference_date)
+    subgraph = get_thresholded_subgraph(loaded_G, node_masks, edge_masks, max_node_masks, max_edge_masks, semantic_to_integer_index, edge_types, edge_index_dicts, target_nodes, reference_date)
 
-    # find largest connected component
-    largest_connected_comp = max(nx.connected_components(subgraph), key=len)
-    subgraph = subgraph.subgraph(largest_connected_comp)
+    # # find largest connected component
+    # largest_connected_comp = max(nx.connected_components(subgraph), key=len)
+    # subgraph = subgraph.subgraph(largest_connected_comp)
+
+    # Get connected components with at least 3 nodes
+    connected_components = [comp for comp in nx.connected_components(subgraph) if (len(comp)>=1)]
+
+    # Combine the connected components to form the final subgraph
+    nodes_to_include = set().union(*connected_components)
+    subgraph = subgraph.subgraph(nodes_to_include)
 
     title = f"Subgraph for {congressperson} and {ticker}"
     draw_subgraph(subgraph, node_colors, shapes, title=title, congressperson_label=congressperson, ticker_label=ticker)
     pass
+
