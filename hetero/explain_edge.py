@@ -190,6 +190,7 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
     else:
         results = {}
         congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
+        print(f"Edge: {congressperson_id.item()}, {ticker_id.item()}")
 
         edge_to_explain = torch.tensor([congressperson_id, ticker_id], device=device)  # Replace with your edge of interest
         edge_type_to_explain = ("congressperson", "buy-sell", "ticker")
