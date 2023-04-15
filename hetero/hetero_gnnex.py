@@ -368,6 +368,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             if key in self.edge_mask_dict:
                 loss += self.coeffs[key] * self.edge_mask_dict[key].sigmoid().sum()
 
+        loss = loss * 1000
         # # Add L1 regularization - this is for sparse explanability
         # l1_regularization = torch.tensor(0.0, device=self.device)
         
