@@ -373,6 +373,8 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
 
         for _, param in self.edge_mask_dict.items():
             l1_regularization += torch.norm(param, 1)
+        
+        print("l1_lambda: ", l1_lambda)
 
         loss += l1_lambda * l1_regularization
 
