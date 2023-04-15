@@ -153,24 +153,18 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
 
         # Define the learning rate scheduler function
         def custom_lr_schedule(epoch):
-            if epoch < 50:
+            if epoch < 20:
+                print("lr: ", 0.01)
+                return 0.01
+            elif epoch < 40:
+                print("lr: ", 0.001)
+                return 0.001
+            elif epoch < 60:
+                print("lr: ", 0.0005)
+                return 0.0005
+            elif epoch < 80:
                 print("lr: ", 0.0001)
                 return 0.0001
-            # elif epoch < 20:
-            #     print("lr: ", 1)
-            #     return 1
-            # elif epoch < 30:
-            #     print("lr: ", 0.1)
-            #     return 0.1
-            # elif epoch < 50:
-            #     print("lr: ", 0.01)
-            #     return 0.01
-            # elif epoch < 70:
-            #     print("lr: ", 0.001)
-            #     return 0.001
-            else:
-                print("lr: ", 0.0001)
-                return 0.00001
 
         # Set up the optimizer
         optimizer = torch.optim.Adam(parameters, lr=self.lr) # this means we're udpating this edge/node_mask dict only.
