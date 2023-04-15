@@ -162,7 +162,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             elif epoch < 60:
                 print("lr: ", 0.0005)
                 return 0.0005
-            elif epoch < 80:
+            else:
                 print("lr: ", 0.0001)
                 return 0.0001
 
