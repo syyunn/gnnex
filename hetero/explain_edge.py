@@ -116,7 +116,7 @@ model_no_embedding.load_state_dict(state_dict_no_embeddings)
 epochs = 200
 lr = 10
 l1_lambda = 1000
-custom_lambda = 0.1
+custom_lambda = 0.01
 
 # Prepare the edge of interest
 which_edges = [i for i in range(data[('congressperson', 'buy-sell', 'ticker')]['edge_index'].shape[1])]
