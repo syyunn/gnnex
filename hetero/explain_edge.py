@@ -169,7 +169,6 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
         edge_attr = torch.tensor(edge_attr_before_scaled/total_days, dtype=torch.float, device=device)
         print("Edge label attribute: ", edge_attr)
 
-
         # Prepare the input data for the model
         x_dict = {node_type: data[node_type].node_id for node_type in num_nodes_dict.keys()}
 
@@ -184,9 +183,6 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
 
         congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
         print(f"Edge: {congressperson_id.item()}, {ticker_id.item()}")
-
-        edge_to_explain = torch.tensor([congressperson_id, ticker_id], device=device)  # Replace with your edge of interest
-        edge_type_to_explain = ("congressperson", "buy-sell", "ticker")
 
         # Run the explain_edge method
         explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr, l1_lambda=l1_lambda)
