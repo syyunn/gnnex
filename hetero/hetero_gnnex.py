@@ -60,7 +60,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
         'EPS': 1e-15,
     }
 
-    def __init__(self, model, epochs: int = 100, lr: float = 0.1, device='cpu', data=None, edge_label_index=None, edge_label_attr=None, l1_lambda=None, **kwargs):
+    def __init__(self, model, epochs: int = 100, lr: float = 0.1, device='cpu', data=None, edge_label_index=None, edge_label_attr=None, l1_lambda=None, custom_lambda = None, **kwargs):
         super().__init__()
         self.edge_label_index = edge_label_index
         self.edge_label_attr = edge_label_attr
@@ -71,6 +71,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
         self.lr = lr
         self.coeffs.update(kwargs)
         self.l1_lambda = l1_lambda
+        self.custom_lambda = custom_lambda
 
         self.node_masks = {}
         self.hard_node_masks = {}
@@ -205,7 +206,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             if index is not None:
                 y_hat, y = y_hat[index], y[index]
             
-            loss = self._loss(y_hat, y, self.l1_lambda)
+            loss = self._loss(y_hat, y, self.l1_lambda, custom_lambda=self.custom_lambda)
             print("loss", loss)
             print("y_hat", y_hat)
             print("y", y)
@@ -318,14 +319,17 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             node_masks[key] = self._post_process_mask(
                 self.node_mask_dict[key],
                 self.hard_node_mask_dict[key],
-                apply_sigmoid=True,
+                # apply_sigmoid=True,
+                apply_sigmoid=False,
+
             )
         edge_masks = {}
         for key in self.edge_mask_dict:
             edge_masks[key] = self._post_process_mask(
                 self.edge_mask_dict[key],
                 self.hard_edge_mask_dict[key],
-                apply_sigmoid=True,
+                # apply_sigmoid=True,
+                apply_sigmoid=False,
             )
 
         self._clean_model(model)
@@ -354,7 +358,7 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
         clear_hetero_masks(model)
 
 
-    def _loss(self, y_hat: Tensor, y: Tensor, l1_lambda: float) -> Tensor:
+    def _loss(self, y_hat: Tensor, y: Tensor, l1_lambda: float, custom_lambda: float) -> Tensor:
         # loss = -torch.sum(y * torch.log(y_hat), dim=0).mean()
         loss = torch.mean(torch.sum((y - y_hat) ** 2, dim=0))
 
@@ -364,19 +368,33 @@ class HeteroGNNExplainer(ExplainerAlgorithm):
             if key in self.edge_mask_dict:
                 loss += self.coeffs[key] * self.edge_mask_dict[key].sigmoid().sum()
 
-        # Add L1 regularization - this is for sparse explanability
-        l1_regularization = torch.tensor(0.0, device=self.device)
+        # # Add L1 regularization - this is for sparse explanability
+        # l1_regularization = torch.tensor(0.0, device=self.device)
         
-        # Apply L1 regularization only on node_mask_dict and edge_mask_dict
+        # # Apply L1 regularization only on node_mask_dict and edge_mask_dict
+        # for _, param in self.node_mask_dict.items():
+        #     l1_regularization += torch.norm(param, 1)
+
+        # for _, param in self.edge_mask_dict.items():
+        #     l1_regularization += torch.norm(param, 1)
+        
+        # print("l1_lambda: ", l1_lambda)
+
+        # loss += l1_lambda * l1_regularization
+
+        custom_regularization = torch.tensor(0.0, device=self.device)
+        threshold = 0.5
+        
+        # Apply custom regularization on node_mask_dict and edge_mask_dict
         for _, param in self.node_mask_dict.items():
-            l1_regularization += torch.norm(param, 1)
+            thresholded_param = (param.sigmoid() > threshold).float()
+            custom_regularization += torch.sum((param.sigmoid() - thresholded_param) ** 2)
 
         for _, param in self.edge_mask_dict.items():
-            l1_regularization += torch.norm(param, 1)
-        
-        print("l1_lambda: ", l1_lambda)
+            thresholded_param = (param.sigmoid() > threshold).float()
+            custom_regularization += torch.sum((param.sigmoid() - thresholded_param) ** 2)
 
-        loss += l1_lambda * l1_regularization
+        loss += custom_lambda * custom_regularization
 
         return loss
-
+    

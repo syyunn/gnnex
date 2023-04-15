@@ -116,6 +116,7 @@ model_no_embedding.load_state_dict(state_dict_no_embeddings)
 epochs = 200
 lr = 10
 l1_lambda = 1000
+custom_lambda = 0.1
 
 # Prepare the edge of interest
 which_edges = [i for i in range(data[('congressperson', 'buy-sell', 'ticker')]['edge_index'].shape[1])]
@@ -185,7 +186,7 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
         print(f"Edge: {congressperson_id.item()}, {ticker_id.item()}")
 
         # Run the explain_edge method
-        explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr, l1_lambda=l1_lambda)
+        explainer = HeteroGNNExplainer(model=model_no_embedding, epochs=100, lr=lr, device=device, data=data, edge_label_index=edge_label_index, edge_label_attr=edge_attr, l1_lambda=l1_lambda, custom_lambda=custom_lambda)
 
         node_masks, edge_masks = explainer(
             model = model_no_embedding, 
@@ -217,7 +218,9 @@ for idx, which_edge in tqdm(enumerate(which_edges)):
             'edge_masks': {k: v.cpu().detach().numpy() for k, v in edge_masks[1].items()},
         }
 
-        with open(f"exp/results/node_edge_masks_results_{idx}_{l1_lambda}_cgp_{congressperson_id}_tic_{ticker_id}_attr{raw_attr}_new_new.pkl", "wb") as f:
+        # with open(f"exp/results/node_edge_masks_results_{idx}_{l1_lambda}_cgp_{congressperson_id}_tic_{ticker_id}_attr{raw_attr}_new_new.pkl", "wb") as f:
+        #     pickle.dump(results, f)
+        with open(f"exp/results/node_edge_masks_results_{idx}_{custom_lambda}_cgp_{congressperson_id}_tic_{ticker_id}_attr{raw_attr}_custom_lambda.pkl", "wb") as f:
             pickle.dump(results, f)
 
     # For debug purposes
