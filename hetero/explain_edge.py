@@ -129,7 +129,7 @@ src = 2361
 dest = 234
 # Find the index of the pair (2361, 234)
 import numpy as np
-indices = np.where((src_indices == src) & (dest_indices == dest))
+indices = np.where((src_indices.cpu() == src) & (dest_indices.cpu() == dest))
 
 
 # Instantiate the HeteroGNNExplainer
