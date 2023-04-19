@@ -170,7 +170,8 @@ print(f"Starting from idx: {already_done}")
 
 for idx, which_edge in tqdm(enumerate(which_edges)):
     if idx < already_done: 
-        continue
+        # continue
+        pass
     else:
         results = {}
         congressperson_id, ticker_id = data[('congressperson', 'buy-sell', 'ticker')]['edge_index'][:, which_edge]
