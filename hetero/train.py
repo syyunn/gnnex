@@ -146,9 +146,9 @@ test_edge_attr = test_data["congressperson", "buy-sell", "ticker"].edge_attr
 
 print("test_edge_label_index", test_edge_label_index)
 print("test_edge_label", test_edge_label)
+
 # Create a dictionary to map edge indices to their attributes
 test_edge_to_attr = {(src.item(), dst.item()): attr.to(device) for src, dst, attr in zip(*test_edge_label_index, test_edge_attr)}
-
 
 # Create the test loader:
 test_loader = LinkNeighborLoader(
@@ -204,7 +204,7 @@ for epoch in range(epochs):
 
         optimizer.zero_grad()
         
-        # Get node embeddings from the batch
+        # Get node ids from the batch
         x_dict = {node_type: batch[node_type].node_id for node_type in num_nodes_dict.keys()}
         
         # Get edge_label_index and edge_label
