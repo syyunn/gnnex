@@ -111,6 +111,18 @@ state_dict_no_embeddings = {key: value for key, value in state_dict_with_embeddi
 # Load the state dict into the model without embeddings
 model_no_embedding.load_state_dict(state_dict_no_embeddings)
 
+# Find specific edge index
+edge_indices = data[('congressperson', 'buy-sell', 'ticker')]['edge_index']
+
+src_indices = edge_indices[0, :]
+dest_indices = edge_indices[1, :]
+
+src = 2361
+dest = 234
+# Find the index of the pair (2361, 234)
+import numpy as np
+indices = np.where((src_indices == src) & (dest_indices == dest))
+
 
 # Instantiate the HeteroGNNExplainer
 epochs = 200
@@ -118,8 +130,11 @@ lr = 10
 l1_lambda = 1000
 custom_lambda = 0.01
 
-# Prepare the edge of interest
+# Prepare the edge of interest (whole)
 which_edges = [i for i in range(data[('congressperson', 'buy-sell', 'ticker')]['edge_index'].shape[1])]
+
+# Prepare the edge of interest (specific)
+which_edges = list(indices[0])
 
 # already_done = 0
 import os
