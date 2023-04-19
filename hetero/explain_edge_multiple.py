@@ -1,3 +1,5 @@
+## This code is deprecated but preserved for future reference only.
+
 import torch
 import torch_geometric.transforms as T
 from torch_geometric.data import HeteroData

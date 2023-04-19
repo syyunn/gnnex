@@ -22,6 +22,14 @@ unique_committees = loaded_data["unique_committees"]
 unique_bills = loaded_data["unique_bills"]
 unique_naics = loaded_data["unique_naics"]
 
+# Create reverse dictionaries
+reverse_data = {v: k for k, v in data.items()}
+reverse_unique_tickers = {v: k for k, v in unique_tickers.items()}
+reverse_unique_congresspeople = {v: k for k, v in unique_congresspeople.items()}
+reverse_unique_committees = {v: k for k, v in unique_committees.items()}
+reverse_unique_bills = {v: k for k, v in unique_bills.items()}
+reverse_unique_naics = {v: k for k, v in unique_naics.items()}
+
 import torch
 
 # Check if a GPU is available and use it, otherwise use the CPU
