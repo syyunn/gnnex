@@ -91,7 +91,7 @@ transform = RandomLinkSplitKfolds(
 # Create the CSV file with the specified column names, if it doesn't exist already
 csv_file_name = "log_results.csv"
 with open(csv_file_name, "a", newline="") as csvfile:
-    fieldnames = ["manual_seed", "edge_type_removed", "accu", "auc_roc", "epoch", "train_test"]
+    fieldnames = ["manual_seed", "edge_type_removed", "fold", "accu", "auc_roc", "epoch", "train_test"]
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
 
@@ -267,6 +267,7 @@ for fold in range(5):
             writer.writerow({
                 "manual_seed": seed,
                 "edge_type_removed": str(edge_type_remove),
+                "fold": fold,
                 "accu": avg_accuracy,
                 "auc_roc": avg_auc_roc,
                 "epoch": epoch,
@@ -286,6 +287,7 @@ for fold in range(5):
             writer.writerow({
                 "manual_seed": seed,
                 "edge_type_removed": str(edge_type_remove),
+                "fold": fold,
                 "accu": test_accuracy,
                 "auc_roc": test_auc_roc,
                 "epoch": epoch, # meaning logged after the finish of such epoch of train data
