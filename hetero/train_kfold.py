@@ -68,8 +68,9 @@ for edge_type, edge_index in data.edge_index_dict.items():
 # model_edge_types = [edge_type for edge_type in edge_types if edge_type not in [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson")]]
 # model_edge_types = [edge_type for edge_type in edge_types if edge_type not in [('ticker', 'lobbies_on', 'bill'), ('bill', 'rev_lobbies_on', 'ticker')]]
 # edge_type_remove = []
-edge_type_remove = [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson")]
+# edge_type_remove = [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson")]
 # edge_type_remove = [('congressperson', 'assignment', 'committee'), ('committee', 'rev_assignment', 'congressperson')]
+edge_type_remove = [('ticker', 'lobbies_on', 'bill'), ('bill', 'rev_lobbies_on', 'ticker')]
 model_edge_types = [edge_type for edge_type in edge_types if edge_type not in edge_type_remove]
 
 print("Edge types:", edge_types)
@@ -91,10 +92,12 @@ transform = RandomLinkSplitKfolds(
 
 # Create the CSV file with the specified column names, if it doesn't exist already
 csv_file_name = "log_results.csv"
-with open(csv_file_name, "a", newline="") as csvfile:
-    fieldnames = ["manual_seed", "edge_type_removed", "fold", "accu", "auc_roc", "epoch", "train_test"]
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    writer.writeheader()
+
+# write header if file does not exist
+# with open(csv_file_name, "a", newline="") as csvfile:
+#     fieldnames = ["manual_seed", "edge_type_removed", "fold", "accu", "auc_roc", "epoch", "train_test"]
+#     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+#     writer.writeheader()
 
 for fold in range(5):
     #train_data, val_data, test_data = transform(data)
