@@ -1,11 +1,25 @@
 import pickle
 from tqdm import tqdm
+
 import torch
+from torch_geometric.loader import LinkNeighborLoader
+
+from torch.nn import functional as F
+
+import torch.optim as optim
+from torch.optim.lr_scheduler import StepLR
+
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import roc_auc_score
+
 from util import RandomLinkSplit
 import torch_geometric.transforms as T
 from util import RandomLinkSplitKfolds
 
-import torch
+# Define the model
+from model import BuySellLinkPrediction
+
+import csv
 
 # Set the random seed for PyTorch, NumPy, and random
 seed = 2328466898069313329
@@ -72,192 +86,211 @@ transform = RandomLinkSplitKfolds(
     rev_edge_types=("ticker", "rev_buy-sell", "congressperson"),
 )
 
-#train_data, val_data, test_data = transform(data)
-fold=1
-train_data, val_data, test_data = transform(data, fold=fold) # custom RandomLinkSplitKfolds
 
-from torch_geometric.loader import LinkNeighborLoader
+# Create the CSV file with the specified column names, if it doesn't exist already
+csv_file_name = "log_results.csv"
+with open(csv_file_name, "a", newline="") as csvfile:
+    fieldnames = ["manual_seed", "edge_type_removed", "accu", "auc_roc", "epoch", "train_test"]
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
 
-#   Define seed edges:
-edge_label_index = train_data["congressperson", "buy-sell", "ticker"].edge_label_index
-edge_label = train_data["congressperson", "buy-sell", "ticker"].edge_label
-edge_attr = train_data["congressperson", "buy-sell", "ticker"].edge_attr
 
-# Create a dictionary to map edge indices to their attributes
-edge_to_attr = {(src.item(), dst.item()): attr.to(device) for src, dst, attr in zip(*edge_label_index, edge_attr)}
+for fold in range(5):
+    #train_data, val_data, test_data = transform(data)
+    print("fold", fold)
+    train_data, val_data, test_data = transform(data, fold=fold) # custom RandomLinkSplitKfolds
 
-# In the first hop, we sample at most 20 neighbors.
-# In the second hop, we sample at most 10 neighbors.
-# In addition, during training, we want to sample negative edges on-the-fly with
-# a ratio of 2:1.
-# We can make use of the `loader.LinkNeighborLoader` from PyG:
+    #   Define seed edges:
+    edge_label_index = train_data["congressperson", "buy-sell", "ticker"].edge_label_index
+    edge_label = train_data["congressperson", "buy-sell", "ticker"].edge_label
+    edge_attr = train_data["congressperson", "buy-sell", "ticker"].edge_attr
 
-num_neigbors = [20, 10, 5]
-batch_size = 128
-print("batch_size", batch_size)
+    # Create a dictionary to map edge indices to their attributes
+    edge_to_attr = {(src.item(), dst.item()): attr.to(device) for src, dst, attr in zip(*edge_label_index, edge_attr)}
 
-train_loader = LinkNeighborLoader(
-    data=train_data,
-    num_neighbors=num_neigbors,
-    edge_label_index=(("congressperson", "buy-sell", "ticker"), edge_label_index),
-    edge_label=edge_label,
-    batch_size=batch_size,
-    shuffle=True,
-)
+    # In the first hop, we sample at most 20 neighbors.
+    # In the second hop, we sample at most 10 neighbors.
 
-# Define seed edges for the test dataset:
-test_edge_label_index = test_data["congressperson", "buy-sell", "ticker"].edge_label_index
-test_edge_label = test_data["congressperson", "buy-sell", "ticker"].edge_label
-test_edge_attr = test_data["congressperson", "buy-sell", "ticker"].edge_attr
+    num_neigbors = [20, 10, 5]
+    batch_size = 128
+    print("batch_size", batch_size)
 
-print("test_edge_label_index", test_edge_label_index)
-print("test_edge_label", test_edge_label)
+    train_loader = LinkNeighborLoader(
+        data=train_data,
+        num_neighbors=num_neigbors,
+        edge_label_index=(("congressperson", "buy-sell", "ticker"), edge_label_index),
+        edge_label=edge_label,
+        batch_size=batch_size,
+        shuffle=True,
+    )
 
-# Create a dictionary to map edge indices to their attributes
-test_edge_to_attr = {(src.item(), dst.item()): attr.to(device) for src, dst, attr in zip(*test_edge_label_index, test_edge_attr)}
+    # Define seed edges for the test dataset:
+    test_edge_label_index = test_data["congressperson", "buy-sell", "ticker"].edge_label_index
+    test_edge_label = test_data["congressperson", "buy-sell", "ticker"].edge_label
+    test_edge_attr = test_data["congressperson", "buy-sell", "ticker"].edge_attr
 
-# Create the test loader:
-test_loader = LinkNeighborLoader(
-    data=test_data,
-    num_neighbors=num_neigbors,  # Same number of neighbors as in the training loader
-    edge_label_index=(("congressperson", "buy-sell", "ticker"), test_edge_label_index),
-    edge_label=test_edge_label,
-    batch_size=batch_size,  # Same batch size as in the training loader
-    shuffle=False,  # No need to shuffle the test dataset
-)
+    print("test_edge_label_index", test_edge_label_index)
+    print("test_edge_label", test_edge_label)
 
-# Define the model
-from model import BuySellLinkPrediction
+    # Create a dictionary to map edge indices to their attributes
+    test_edge_to_attr = {(src.item(), dst.item()): attr.to(device) for src, dst, attr in zip(*test_edge_label_index, test_edge_attr)}
 
-# Given the HeteroData object named 'data'
-num_nodes_dict = {node_type: data[node_type].num_nodes for node_type in data.node_types}
+    # Create the test loader:
+    test_loader = LinkNeighborLoader(
+        data=test_data,
+        num_neighbors=num_neigbors,  # Same number of neighbors as in the training loader
+        edge_label_index=(("congressperson", "buy-sell", "ticker"), test_edge_label_index),
+        edge_label=test_edge_label,
+        batch_size=batch_size,  # Same batch size as in the training loader
+        shuffle=False,  # No need to shuffle the test dataset
+    )
 
-# Print the num_nodes_dict
-print("num_nodes_dict:", num_nodes_dict)
+    # Given the HeteroData object named 'data'
+    num_nodes_dict = {node_type: data[node_type].num_nodes for node_type in data.node_types}
 
-# Instantiate the model
-num_layers = 2
-print("num_layers", num_layers)
-# model = BuySellLinkPrediction(num_nodes_dict, embedding_dim=64, num_edge_features=2, out_channels=64, edge_types=edge_types, num_layers=num_layers).to(device)
-model = BuySellLinkPrediction(num_nodes_dict, embedding_dim=64, num_edge_features=2, out_channels=64, edge_types=model_edge_types, num_layers=num_layers).to(device)
+    # Print the num_nodes_dict
+    print("num_nodes_dict:", num_nodes_dict)
 
-# Training loop
-import torch.optim as optim
-from torch.nn import functional as F
+    # Instantiate the model
+    num_layers = 2
+    print("num_layers", num_layers)
+    # model = BuySellLinkPrediction(num_nodes_dict, embedding_dim=64, num_edge_features=2, out_channels=64, edge_types=edge_types, num_layers=num_layers).to(device)
+    model = BuySellLinkPrediction(num_nodes_dict, embedding_dim=64, num_edge_features=2, out_channels=64, edge_types=model_edge_types, num_layers=num_layers).to(device)
 
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import roc_auc_score
+    # Training loop
+    epochs = 3
+    optimizer = optim.Adam(model.parameters(), lr=0.005)  # You can set the learning rate (lr) as needed
 
-from torch.optim.lr_scheduler import StepLR
+    # Define the learning rate scheduler
+    scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # Decay the learning rate by a factor of 0.1 every 10 epochs
 
-epochs = 100
-optimizer = optim.Adam(model.parameters(), lr=0.005)  # You can set the learning rate (lr) as needed
+    # Initialize a variable to keep track of the best test AUC-ROC score
+    best_test_auc_roc = 0.0
 
-# Define the learning rate scheduler
-scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # Decay the learning rate by a factor of 0.1 every 10 epochs
+    for epoch in range(epochs):
+        model.train()
+        total_loss = 0
+        total_accuracy = 0
+        total_auc_roc = 0
 
-# Initialize a variable to keep track of the best test AUC-ROC score
-best_test_auc_roc = 0.0
+        for batch in tqdm(train_loader):
+            batch = batch.to(device) # Move the batch to the device
+            batch_edge_label = batch[("congressperson", "buy-sell", "ticker")].edge_label
 
-for epoch in range(epochs):
-    model.train()
-    total_loss = 0
-    total_accuracy = 0
-    total_auc_roc = 0
-    for batch in tqdm(train_loader):
-        batch = batch.to(device) # Move the batch to the device
-        batch_edge_label = batch[("congressperson", "buy-sell", "ticker")].edge_label
+            optimizer.zero_grad()
+            
+            # Get node ids from the batch
+            x_dict = {node_type: batch[node_type].node_id for node_type in num_nodes_dict.keys()}
+            
+            # Get edge_label_index and edge_label
+            edge_label_index = batch[("congressperson", "buy-sell", "ticker")].edge_label_index
+            edge_label = batch[("congressperson", "buy-sell", "ticker")].edge_label
 
-        optimizer.zero_grad()
-        
-        # Get node ids from the batch
-        x_dict = {node_type: batch[node_type].node_id for node_type in num_nodes_dict.keys()}
-        
-        # Get edge_label_index and edge_label
-        edge_label_index = batch[("congressperson", "buy-sell", "ticker")].edge_label_index
-        edge_label = batch[("congressperson", "buy-sell", "ticker")].edge_label
+            from util import get_edge_attr_for_batch
+            batch_edge_label_attr = get_edge_attr_for_batch(train_data["congressperson", "buy-sell", "ticker"].edge_index, train_data["congressperson", "buy-sell", "ticker"].edge_attr, edge_label_index, edge_to_attr)
+            batch_edge_label_attr = batch_edge_label_attr.to(device)
 
-        from util import get_edge_attr_for_batch
-        batch_edge_label_attr = get_edge_attr_for_batch(train_data["congressperson", "buy-sell", "ticker"].edge_index, train_data["congressperson", "buy-sell", "ticker"].edge_attr, edge_label_index, edge_to_attr)
-        batch_edge_label_attr = batch_edge_label_attr.to(device)
+            # Count the number of samples with label 0 (negative samples)
+            num_negatives = torch.sum(edge_label == 0).item()
 
-        # Count the number of samples with label 0 (negative samples)
-        num_negatives = torch.sum(edge_label == 0).item()
+            # Count the number of samples with label 1 (positive samples)
+            num_positives = torch.sum(edge_label == 1).item()
 
-        # Count the number of samples with label 1 (positive samples)
-        num_positives = torch.sum(edge_label == 1).item()
+            # # Print the counts
+            # print(f"Number of negative samples (label 0): {num_negatives}")
+            # print(f"Number of positive samples (label 1): {num_positives}")
+            
+            # print("batch.edge_attr_dict", batch.edge_attr_dict)
 
-        # # Print the counts
-        # print(f"Number of negative samples (label 0): {num_negatives}")
-        # print(f"Number of positive samples (label 1): {num_positives}")
-        
-        # print("batch.edge_attr_dict", batch.edge_attr_dict)
+            # date scaling
+            from datetime import date
 
-        # date scaling
-        from datetime import date
+            start_date = date(2016, 1, 1)
+            today = date.today()
 
-        start_date = date(2016, 1, 1)
-        today = date.today()
+            total_days = (today - start_date).days
 
-        total_days = (today - start_date).days
+            scaled_edge_attr_dict = {
+                key: value / total_days
+                for key, value in batch.edge_attr_dict.items()
+            }
+            # print("scaled_edge_attr_dict", scaled_edge_attr_dict)
+            # Forward pass
+            preds, preds_before_sig = model(x_dict, batch.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=batch_edge_label_attr)
+            # print("preds", preds)
+            # Assuming 'preds' is a tensor obtained from the model's output
+            num_ones = torch.sum(torch.eq(preds, 1)).item()
+            num_zeros = torch.sum(torch.eq(preds, 0)).item()
 
-        scaled_edge_attr_dict = {
-            key: value / total_days
-            for key, value in batch.edge_attr_dict.items()
-        }
-        # print("scaled_edge_attr_dict", scaled_edge_attr_dict)
-        # Forward pass
-        preds, preds_before_sig = model(x_dict, batch.edge_index_dict, scaled_edge_attr_dict, edge_label_index, edge_label_attr=batch_edge_label_attr)
-        # print("preds", preds)
-        # Assuming 'preds' is a tensor obtained from the model's output
-        num_ones = torch.sum(torch.eq(preds, 1)).item()
-        num_zeros = torch.sum(torch.eq(preds, 0)).item()
+            # Print the results
+            # print(f"Number of ones in 'preds': {num_ones}")
+            # print(f"Number of zeros in 'preds': {num_zeros}")
+            
+            # Compute loss
+            loss = F.binary_cross_entropy(preds, edge_label.float())
+            # print("label", edge_label)
+            total_loss += loss.item()
 
-        # Print the results
-        # print(f"Number of ones in 'preds': {num_ones}")
-        # print(f"Number of zeros in 'preds': {num_zeros}")
-        
-        # Compute loss
-        loss = F.binary_cross_entropy(preds, edge_label.float())
-        # print("label", edge_label)
-        total_loss += loss.item()
+            # Convert predicted probabilities to binary predictions
+            binary_preds = (preds > 0.5).float()
+            # print("binary_preds", binary_preds)
+            
+            # Compute accuracy
+            accuracy = accuracy_score(edge_label.cpu().numpy(), binary_preds.cpu().numpy())
+            total_accuracy += accuracy
 
-         # Convert predicted probabilities to binary predictions
-        binary_preds = (preds > 0.5).float()
-        # print("binary_preds", binary_preds)
-        
-        # Compute accuracy
-        accuracy = accuracy_score(edge_label.cpu().numpy(), binary_preds.cpu().numpy())
-        total_accuracy += accuracy
+            # Compute AUC-ROC
+            auc_roc = roc_auc_score(edge_label.cpu().detach().numpy(), preds.cpu().detach().numpy())      
+            total_auc_roc += auc_roc  
 
-        # Compute AUC-ROC
-        auc_roc = roc_auc_score(edge_label.cpu().detach().numpy(), preds.cpu().detach().numpy())      
-        total_auc_roc += auc_roc  
+            # Backward pass
+            loss.backward()
+            optimizer.step()
 
-        # Backward pass
-        loss.backward()
-        optimizer.step()
+        # Update the learning rate using the scheduler
+        scheduler.step()
 
-    # Update the learning rate using the scheduler
-    scheduler.step()
+        # Print per-epoch loss
+        avg_loss = total_loss / len(train_loader) # avg means avg over batches in an epoch
+        avg_accuracy = total_accuracy / len(train_loader)
+        avg_auc_roc = total_auc_roc / len(train_loader)
 
-    # Print loss
-    avg_loss = total_loss / len(train_loader)
-    avg_accuracy = total_accuracy / len(train_loader)
-    avg_auc_roc = total_auc_roc / len(train_loader)
+        print(f"Epoch [{epoch+1}/{epochs}] Loss: {avg_loss:.4f} Train Accuracy: {avg_accuracy:.4f} Train AUC-ROC: {avg_auc_roc:.4f}")
 
-    print(f"Epoch [{epoch+1}/{epochs}] Loss: {avg_loss:.4f} Train Accuracy: {avg_accuracy:.4f} Train AUC-ROC: {avg_auc_roc:.4f}")
+        with open(csv_file_name, "a", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-    # eval
-    # Evaluate the model on the test dataset
-    from util import evaluate
-    test_loss, test_accuracy, test_auc_roc = evaluate(test_loader, model, device, num_nodes_dict, test_data, test_edge_to_attr)
-    print(f"Test Loss: {test_loss:.4f} Test Accuracy: {test_accuracy:.4f} Test AUC-ROC: {test_auc_roc:.4f}")
+            # Log the train metrics
+            writer.writerow({
+                "manual_seed": seed,
+                "edge_type_removed": str(edge_type_remove),
+                "accu": avg_accuracy,
+                "auc_roc": avg_auc_roc,
+                "epoch": epoch,
+                "train_test": "train",
+            })
 
-    # Check if the current test AUC-ROC score is better than the best one seen so far
-    if test_auc_roc > best_test_auc_roc:
-        # Update the best test AUC-ROC score
-        best_test_auc_roc = test_auc_roc
-        # Save the model with the best test AUC-ROC score
-        print("Model saved with best test AUC-ROC:", best_test_auc_roc)
-        torch.save(model.state_dict(), f"buysell_link_prediction_best_model_accu_{best_test_auc_roc}_new.pt")
+        # eval
+        # Evaluate the model on the test dataset
+        from util import evaluate
+        test_loss, test_accuracy, test_auc_roc = evaluate(test_loader, model, device, num_nodes_dict, test_data, test_edge_to_attr)
+        print(f"Test Loss: {test_loss:.4f} Test Accuracy: {test_accuracy:.4f} Test AUC-ROC: {test_auc_roc:.4f}")
+
+
+        # Log the test metrics
+        writer.writerow({
+            "manual_seed": seed,
+            "edge_type_removed": str(edge_type_remove),
+            "accu": test_accuracy,
+            "auc_roc": test_auc_roc,
+            "epoch": epoch, # meaning logged after the finish of such epoch of train data
+            "train_test": "test",
+        })
+
+        # Check if the current test AUC-ROC score is better than the best one seen so far
+        if test_auc_roc > best_test_auc_roc:
+            # Update the best test AUC-ROC score
+            best_test_auc_roc = test_auc_roc
+            # Save the model with the best test AUC-ROC score
+            print("Model saved with best test AUC-ROC:", best_test_auc_roc)
+            torch.save(model.state_dict(), f"buysell_link_prediction_best_model_accu_{best_test_auc_roc}_new.pt")
