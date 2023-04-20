@@ -88,8 +88,15 @@ class BuySellLinkPrediction(torch.nn.Module):
         out = self.gnn(x_dict, edge_index_dict, edge_attr_dict)
         
         # Extract embeddings for 'congressperson' and 'ticker' node types
-        congressperson_emb = out['congressperson']
-        ticker_emb = out['ticker']
+        try:
+            congressperson_emb = out['congressperson']
+        except KeyError:
+            congressperson_emb = self.gnn.embeddings['congressperson']
+
+        try:
+            ticker_emb = out['ticker']
+        except KeyError:
+            ticker_emb = self.gnn.embeddings['ticker'] # these try-except for ablation studies where we remove certain types of edges.
         
         # Concatenate embeddings of source and target nodes
         concatenated_emb = torch.cat([congressperson_emb[edge_label_index[0]], ticker_emb[edge_label_index[1]], edge_label_attr], dim=-1)
