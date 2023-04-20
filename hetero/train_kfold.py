@@ -112,7 +112,8 @@ for fold in range(5):
 
     num_neigbors = [20, 10, 5]
     # batch_size = 128
-    batch_size = 256
+    # batch_size = 256
+    batch_size = 512
     print("batch_size", batch_size)
 
     train_loader = LinkNeighborLoader(
