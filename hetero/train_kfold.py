@@ -160,7 +160,7 @@ for fold in range(5):
     model = BuySellLinkPrediction(num_nodes_dict, embedding_dim=64, num_edge_features=2, out_channels=64, edge_types=model_edge_types, num_layers=num_layers).to(device)
 
     # Training loop
-    epochs = 3
+    epochs = 5
     # optimizer = optim.Adam(model.parameters(), lr=0.005)  # You can set the learning rate (lr) as needed
     optimizer = optim.Adam(model.parameters(), lr=0.001)  # You can set the learning rate (lr) as needed
 
