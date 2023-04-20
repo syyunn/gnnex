@@ -70,7 +70,10 @@ for edge_type, edge_index in data.edge_index_dict.items():
 # edge_type_remove = []
 # edge_type_remove = [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson")]
 # edge_type_remove = [('congressperson', 'assignment', 'committee'), ('committee', 'rev_assignment', 'congressperson')]
-edge_type_remove = [('ticker', 'lobbies_on', 'bill'), ('bill', 'rev_lobbies_on', 'ticker')]
+edge_type_remove = [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson"), ('ticker', 'lobbies_on', 'bill'), ('bill', 'rev_lobbies_on', 'ticker')]
+edge_type_removed = "buy-sell & lobbies_on"
+# edge_type_remove = [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson"), ('ticker', 'lobbies_on', 'bill'), ('bill', 'rev_lobbies_on', 'ticker')]
+
 model_edge_types = [edge_type for edge_type in edge_types if edge_type not in edge_type_remove]
 
 print("Edge types:", edge_types)
@@ -272,7 +275,7 @@ for fold in range(5):
             # Log the train metrics
             writer.writerow({
                 "manual_seed": seed,
-                "edge_type_removed": str(edge_type_remove),
+                "edge_type_removed": edge_type_removed,
                 "fold": fold,
                 "accu": avg_accuracy,
                 "auc_roc": avg_auc_roc,
@@ -292,7 +295,7 @@ for fold in range(5):
             # Log the test metrics
             writer.writerow({
                 "manual_seed": seed,
-                "edge_type_removed": str(edge_type_remove),
+                "edge_type_removed": edge_type_removed,
                 "fold": fold,
                 "accu": test_accuracy,
                 "auc_roc": test_auc_roc,
