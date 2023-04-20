@@ -2,8 +2,13 @@ import pickle
 from tqdm import tqdm
 import torch
 from util import RandomLinkSplit
+import torch_geometric.transforms as T
 from util import RandomLinkSplitKfolds
 
+import torch
+
+# Print the random seed
+print(f"Random seed: {torch.initial_seed()}")
 
 with open('./data/hetero_graph_data.pkl', "rb") as f:
     loaded_data = pickle.load(f)
@@ -35,6 +40,7 @@ print(data.node_types)
 
 # Collect edge_types 
 edge_types = []
+
 # Convert edge_index tensors to integer type (torch.long)
 for edge_type, edge_index in data.edge_index_dict.items():
     data.edge_index_dict[edge_type] = edge_index.to(torch.long)
@@ -43,9 +49,7 @@ for edge_type, edge_index in data.edge_index_dict.items():
 model_edge_types = [edge_type for edge_type in edge_types if edge_type not in [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson")]]
 
 print("Edge types:", edge_types)
-print(len(edge_types))
-
-import torch_geometric.transforms as T
+print("Total number of edge types: ", len(edge_types))
 
 # transform = T.RandomLinkSplit(
 # transform = RandomLinkSplit(
@@ -60,28 +64,8 @@ transform = RandomLinkSplitKfolds(
     rev_edge_types=("ticker", "rev_buy-sell", "congressperson"),
 )
 
-train_data, val_data, test_data = transform(data, fold=0)
-
-# Count the number of training instances
-def count_edge_indices(data):
-    count = 0
-    edge_indices = data["congressperson", "buy-sell", "ticker"]['edge_index']
-    count += edge_indices.size(1)
-    return count
-
-edge_types = [("congressperson", "buy-sell", "ticker")]
-
-num_train_instances = count_edge_indices(train_data)
-num_val_instances = count_edge_indices(val_data)
-num_test_instances = count_edge_indices(test_data)
-
-print("Number of training instances:", num_train_instances)
-print("Number of validation instances:", num_val_instances)
-print("Number of test instances:", num_test_instances)
-# Check unique values after applying the transform
-transformed_edge_label = train_data["congressperson", "buy-sell", "ticker"].edge_label
-
-# split the data into train and test
+#train_data, val_data, test_data = transform(data)
+train_data, val_data, test_data = transform(data, fold=0) # custom RandomLinkSplitKfolds
 
 from torch_geometric.loader import LinkNeighborLoader
 
@@ -140,7 +124,7 @@ from model import BuySellLinkPrediction
 num_nodes_dict = {node_type: data[node_type].num_nodes for node_type in data.node_types}
 
 # Print the num_nodes_dict
-print(num_nodes_dict)
+print("num_nodes_dict:", num_nodes_dict)
 
 # Instantiate the model
 num_layers = 2
