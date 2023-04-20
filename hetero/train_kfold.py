@@ -66,7 +66,8 @@ transform = RandomLinkSplitKfolds(
 )
 
 #train_data, val_data, test_data = transform(data)
-train_data, val_data, test_data = transform(data, fold=0) # custom RandomLinkSplitKfolds
+fold=1
+train_data, val_data, test_data = transform(data, fold=fold) # custom RandomLinkSplitKfolds
 
 from torch_geometric.loader import LinkNeighborLoader
 
