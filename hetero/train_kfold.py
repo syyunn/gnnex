@@ -7,6 +7,11 @@ from util import RandomLinkSplitKfolds
 
 import torch
 
+
+# Set the random seed for PyTorch, NumPy, and random
+seed = 2328466898069313329
+torch.manual_seed(seed)
+
 # Print the random seed
 print(f"Random seed: {torch.initial_seed()}")
 
