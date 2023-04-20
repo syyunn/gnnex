@@ -92,6 +92,7 @@ class BuySellLinkPrediction(torch.nn.Module):
             congressperson_emb = out['congressperson']
         except KeyError:
             congressperson_emb = self.gnn.embeddings['congressperson']
+            missing = 'congressperson'
 
         try:
             ticker_emb = out['ticker']
@@ -99,7 +100,13 @@ class BuySellLinkPrediction(torch.nn.Module):
             ticker_emb = self.gnn.embeddings['ticker'] # these try-except for ablation studies where we remove certain types of edges.
         
         # Concatenate embeddings of source and target nodes
-        concatenated_emb = torch.cat([congressperson_emb[edge_label_index[0]], ticker_emb[edge_label_index[1]], edge_label_attr], dim=-1)
+        try:
+            concatenated_emb = torch.cat([congressperson_emb[edge_label_index[0]], ticker_emb[edge_label_index[1]], edge_label_attr], dim=-1)
+        except TypeError:
+            if missing == 'congressperson':
+                concatenated_emb = torch.cat([congressperson_emb.forward(edge_label_index[0]), ticker_emb[edge_label_index[1]], edge_label_attr], dim=-1)
+            elif missing == 'ticker':
+                concatenated_emb = torch.cat([congressperson_emb[edge_label_index[0]], ticker_emb.forward(edge_label_index[1]), edge_label_attr], dim=-1)
         
         # Compute predictions using linear layer and sigmoid activation
         preds_before_sig = self.prediction_head(concatenated_emb)
