@@ -94,7 +94,6 @@ with open(csv_file_name, "a", newline="") as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
 
-
 for fold in range(5):
     #train_data, val_data, test_data = transform(data)
     print("fold", fold)
@@ -276,16 +275,18 @@ for fold in range(5):
         test_loss, test_accuracy, test_auc_roc = evaluate(test_loader, model, device, num_nodes_dict, test_data, test_edge_to_attr)
         print(f"Test Loss: {test_loss:.4f} Test Accuracy: {test_accuracy:.4f} Test AUC-ROC: {test_auc_roc:.4f}")
 
+        with open(csv_file_name, "a", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-        # Log the test metrics
-        writer.writerow({
-            "manual_seed": seed,
-            "edge_type_removed": str(edge_type_remove),
-            "accu": test_accuracy,
-            "auc_roc": test_auc_roc,
-            "epoch": epoch, # meaning logged after the finish of such epoch of train data
-            "train_test": "test",
-        })
+            # Log the test metrics
+            writer.writerow({
+                "manual_seed": seed,
+                "edge_type_removed": str(edge_type_remove),
+                "accu": test_accuracy,
+                "auc_roc": test_auc_roc,
+                "epoch": epoch, # meaning logged after the finish of such epoch of train data
+                "train_test": "test",
+            })
 
         # Check if the current test AUC-ROC score is better than the best one seen so far
         if test_auc_roc > best_test_auc_roc:
