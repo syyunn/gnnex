@@ -7,7 +7,6 @@ from util import RandomLinkSplitKfolds
 
 import torch
 
-
 # Set the random seed for PyTorch, NumPy, and random
 seed = 2328466898069313329
 torch.manual_seed(seed)
@@ -54,8 +53,8 @@ for edge_type, edge_index in data.edge_index_dict.items():
 # model_edge_types = edge_types
 # model_edge_types = [edge_type for edge_type in edge_types if edge_type not in [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson")]]
 # model_edge_types = [edge_type for edge_type in edge_types if edge_type not in [('ticker', 'lobbies_on', 'bill'), ('bill', 'rev_lobbies_on', 'ticker')]]
-model_edge_types = [edge_type for edge_type in edge_types if edge_type not in [('congressperson', 'assignment', 'committee'), ('committee', 'rev_assignment', 'congressperson')]]
-
+edge_type_remove = [('congressperson', 'assignment', 'committee'), ('committee', 'rev_assignment', 'congressperson')]
+model_edge_types = [edge_type for edge_type in edge_types if edge_type not in edge_type_remove]
 
 print("Edge types:", edge_types)
 print("Total number of edge types: ", len(edge_types))
