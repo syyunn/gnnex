@@ -99,6 +99,8 @@ csv_file_name = "log_results.csv"
 #     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 #     writer.writeheader()
 
+fieldnames = ["manual_seed", "edge_type_removed", "fold", "accu", "auc_roc", "epoch", "train_test"]
+
 for fold in range(5):
     #train_data, val_data, test_data = transform(data)
     print("fold", fold)
