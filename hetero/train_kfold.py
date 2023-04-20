@@ -46,8 +46,8 @@ for edge_type, edge_index in data.edge_index_dict.items():
     data.edge_index_dict[edge_type] = edge_index.to(torch.long)
     edge_types.append(edge_type)
 
-# model_edge_types = [edge_type for edge_type in edge_types if edge_type not in [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson")]]
-model_edge_types = edge_types
+# model_edge_types = edge_types
+model_edge_types = [edge_type for edge_type in edge_types if edge_type not in [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson")]]
 
 print("Edge types:", edge_types)
 print("Total number of edge types: ", len(edge_types))
