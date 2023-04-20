@@ -111,7 +111,8 @@ for fold in range(5):
     # In the second hop, we sample at most 10 neighbors.
 
     num_neigbors = [20, 10, 5]
-    batch_size = 128
+    # batch_size = 128
+    batch_size = 256
     print("batch_size", batch_size)
 
     train_loader = LinkNeighborLoader(
@@ -158,7 +159,8 @@ for fold in range(5):
 
     # Training loop
     epochs = 3
-    optimizer = optim.Adam(model.parameters(), lr=0.005)  # You can set the learning rate (lr) as needed
+    # optimizer = optim.Adam(model.parameters(), lr=0.005)  # You can set the learning rate (lr) as needed
+    optimizer = optim.Adam(model.parameters(), lr=0.001)  # You can set the learning rate (lr) as needed
 
     # Define the learning rate scheduler
     scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # Decay the learning rate by a factor of 0.1 every 10 epochs
