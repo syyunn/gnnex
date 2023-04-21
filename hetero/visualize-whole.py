@@ -284,7 +284,7 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
     # target_ticker-target_naics  congresperson 
     # add top_k edges for for target_naics for the edge type ('naics', 'classified', 'ticker')
     edge_types = [('ticker', 'classified', 'naics'), ('naics', 'rev_classified', 'ticker')]
-    top_k = 10 #At most 10 edges in the same industry
+    top_k = 20 #At most 10 edges in the same industry
     for edge_type in edge_types:
         edge_mask = edge_masks[edge_type]
 
@@ -311,7 +311,7 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
     print("Ticker nodes: ", ticker_nodes)
 
     # Initialize a variable for the top_l edges and look_back period
-    top_l = 20
+    top_l = 1 # lobbying edge
     look_back = 365
 
     for edge_type in lobbies_edge_types:
@@ -547,7 +547,9 @@ shapes = {
 # read files in exp/trans_edge_not_included/results
 import os
 # folder_path = "exp/trans_edge_not_included/results_legacy"
-folder_path = "exp/trans_edge_not_included/results"
+# folder_path = "exp/trans_edge_not_included/results"
+folder_path = "exp/trans_edge_not_included/results_wyden_klac"
+
 
 pkl_files = [f for f in os.listdir(folder_path) if f.endswith('.pkl')]
 

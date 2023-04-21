@@ -34,7 +34,7 @@ plt.title('AUC-ROC for Two "&"s in Edge Type Removed')
 plt.legend(title='Train/Test', loc='center left', bbox_to_anchor=(1, 0.5))
 
 plt.subplot(4, 1, 4)
-sns.pointplot(data=df_max_epoch[df_max_epoch['edge_type_removed'].str.count('&') > 3], x='edge_type_removed', y='auc_roc', hue='train_test', ci='sd', capsize=0.1, dodge=True, linestyles='')
+sns.pointplot(data=df_max_epoch[df_max_epoch['edge_type_removed'].str.count('&') >= 3], x='edge_type_removed', y='auc_roc', hue='train_test', ci='sd', capsize=0.1, dodge=True, linestyles='')
 plt.xlabel('Edge Type Removed')
 plt.ylabel('AUC-ROC')
 plt.title('AUC-ROC for Three "&"s in Edge Type Removed')
