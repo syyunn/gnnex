@@ -82,11 +82,20 @@ for edge_type, edge_index in data.edge_index_dict.items():
 # edge_type_remove = [("congressperson", "buy-sell", "ticker"), ("ticker", "rev_buy-sell", "congressperson"), ('ticker', 'lobbies_on', 'bill'), ('bill', 'rev_lobbies_on', 'ticker')]
 edge_type_remove = [("congressperson", "buy-sell", "ticker"), 
                     ("ticker", "rev_buy-sell", "congressperson"), 
+                    
                     ('congressperson', 'assignment', 'committee'), 
                     ('committee', 'rev_assignment', 'congressperson'), 
+
+                    ('bill', 'assigned_to', 'committee'), 
+                    ('committee', 'rev_assigned_to', 'bill'),
+
+                    ('ticker', 'lobbies_on', 'bill'), 
+                    ('bill', 'rev_lobbies_on', 'ticker'),
+
                     ('ticker', 'classified', 'naics'), 
-                    ('naics', 'rev_classified', 'ticker')]
-edge_type_removed = "buy-sell & MC-committee & ticker-naics"
+                    ('naics', 'rev_classified', 'ticker'),
+                    ]
+edge_type_removed = "buy-sell & MC-committee & bill-committee & lobbies-on & ticker-naics"
 
 model_edge_types = [edge_type for edge_type in edge_types if edge_type not in edge_type_remove]
 

@@ -87,25 +87,29 @@ class BuySellLinkPrediction(torch.nn.Module):
         # Get embeddings from GNN
         out = self.gnn(x_dict, edge_index_dict, edge_attr_dict)
         
+        missing = []
         # Extract embeddings for 'congressperson' and 'ticker' node types
         try:
             congressperson_emb = out['congressperson']
         except KeyError:
             congressperson_emb = self.gnn.embeddings['congressperson']
-            missing = 'congressperson'
+            missing.append('congressperson')
 
         try:
             ticker_emb = out['ticker']
         except KeyError:
             ticker_emb = self.gnn.embeddings['ticker'] # these try-except for ablation studies where we remove certain types of edges.
+            missing.append('ticker')
         
         # Concatenate embeddings of source and target nodes
         try:
             concatenated_emb = torch.cat([congressperson_emb[edge_label_index[0]], ticker_emb[edge_label_index[1]], edge_label_attr], dim=-1)
         except TypeError:
-            if missing == 'congressperson':
+            if 'congressperson' in missing and 'ticker' in missing:
+                concatenated_emb = torch.cat([congressperson_emb.forward(edge_label_index[0]), ticker_emb.forward(edge_label_index[1]), edge_label_attr], dim=-1)
+            elif 'congressperson' in missing:
                 concatenated_emb = torch.cat([congressperson_emb.forward(edge_label_index[0]), ticker_emb[edge_label_index[1]], edge_label_attr], dim=-1)
-            elif missing == 'ticker':
+            elif 'ticker' in missing:
                 concatenated_emb = torch.cat([congressperson_emb[edge_label_index[0]], ticker_emb.forward(edge_label_index[1]), edge_label_attr], dim=-1)
         
         # Compute predictions using linear layer and sigmoid activation
