@@ -309,8 +309,13 @@ for subset in tqdm(subsets):
             #         "epoch": epoch,
             #         "train_test": "train",
             #     })
-            auc_rocs_train[tuple(edge_type_include)][fold] = avg_auc_roc
-            accs_train[tuple(edge_type_include)][fold] = avg_accuracy
+            if edge_type_include == []:
+                key = "empty"                
+            else: 
+                key = tuple(edge_type_include) 
+
+            auc_rocs_train[key][fold] = avg_auc_roc
+            accs_train[key][fold] = avg_accuracy
 
             # eval
             # Evaluate the model on the test dataset
@@ -331,8 +336,8 @@ for subset in tqdm(subsets):
             #         "epoch": epoch, # meaning logged after the finish of such epoch of train data
             #         "train_test": "test",
             #     })
-            auc_rocs_test[tuple(edge_type_include)][fold] = test_auc_roc
-            accs_test[tuple(edge_type_include)][fold] = test_accuracy
+            auc_rocs_test[key][fold] = test_auc_roc
+            accs_test[key][fold] = test_accuracy
 
             # Check if the current test AUC-ROC score is better than the best one seen so far
             if test_auc_roc > best_test_auc_roc:
