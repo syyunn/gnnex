@@ -67,13 +67,15 @@ for edge_type, edge_index in data.edge_index_dict.items():
 print(edge_types)
 
 
+from collections import defaultdict
+
 # define
-auc_rocs_train = {}
-auc_rocs_test = {}
+auc_rocs_train = defaultdict(dict)
+auc_rocs_test = defaultdict(dict)
 
 # define accs
-accs_train = {}
-accs_test = {}
+accs_train = defaultdict(dict)
+accs_test = defaultdict(dict)
 
 # define subsets
 import itertools
@@ -309,10 +311,7 @@ for subset in tqdm(subsets):
             #         "epoch": epoch,
             #         "train_test": "train",
             #     })
-            if edge_type_include == []:
-                key = "empty"                
-            else: 
-                key = tuple(edge_type_include) 
+            key = tuple(edge_type_include) 
 
             auc_rocs_train[key][fold] = avg_auc_roc
             accs_train[key][fold] = avg_accuracy
