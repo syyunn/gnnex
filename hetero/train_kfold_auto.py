@@ -113,8 +113,11 @@ for subset in tqdm(subsets):
     edge_type_include = subset
     key = tuple(edge_type_include) 
     if key in already_done:
-        print("Already done: ", key)
-        continue
+        already_done_folds = list(k_folds[0][key].keys())
+        if max(already_done_folds) == 4:
+            continue
+        else:
+            pass
 
     print("Edge types to include: ", edge_type_include)
 
