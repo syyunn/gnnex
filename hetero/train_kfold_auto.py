@@ -113,7 +113,10 @@ for subset in tqdm(subsets):
     edge_type_include = subset
     key = tuple(edge_type_include) 
     if key in already_done:
+        print("Already done: ", key)
         continue
+
+    print("Edge types to include: ", edge_type_include)
 
     edge_type_remove = [edge_type for edge_type in edge_types if edge_type not in edge_type_include]
     assert len(edge_type_include) + len(edge_type_remove) == len(edge_types)
