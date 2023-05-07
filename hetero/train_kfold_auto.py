@@ -93,8 +93,21 @@ print(len(subsets))
 for subset in subsets:
     print(subset)
 
+#read k_folds.pkl
+import pickle
+with open('k_folds.pkl', 'rb') as f:
+    k_folds = pickle.load(f)
+
+already_done = k_folds[0].keys()
+print(already_done)
+
 for subset in tqdm(subsets):
+
     edge_type_include = subset
+    key = tuple(edge_type_include) 
+    if key in already_done:
+        continue
+
     edge_type_remove = [edge_type for edge_type in edge_types if edge_type not in edge_type_include]
     assert len(edge_type_include) + len(edge_type_remove) == len(edge_types)
 
@@ -311,7 +324,6 @@ for subset in tqdm(subsets):
             #         "epoch": epoch,
             #         "train_test": "train",
             #     })
-            key = tuple(edge_type_include) 
 
             auc_rocs_train[key][fold] = avg_auc_roc
             accs_train[key][fold] = avg_accuracy
