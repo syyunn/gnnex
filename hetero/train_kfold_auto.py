@@ -69,13 +69,13 @@ print(edge_types)
 
 from collections import defaultdict
 
-# define
-auc_rocs_train = defaultdict(dict)
-auc_rocs_test = defaultdict(dict)
+# # define
+# auc_rocs_train = defaultdict(dict)
+# auc_rocs_test = defaultdict(dict)
 
-# define accs
-accs_train = defaultdict(dict)
-accs_test = defaultdict(dict)
+# # define accs
+# accs_train = defaultdict(dict)
+# accs_test = defaultdict(dict)
 
 # define subsets
 import itertools
@@ -97,6 +97,13 @@ for subset in subsets:
 import pickle
 with open('k_folds.pkl', 'rb') as f:
     k_folds = pickle.load(f)
+
+auc_rocs_train = k_folds[0]
+accs_train = k_folds[1]
+
+# define accs
+auc_rocs_test = k_folds[2]
+accs_test = k_folds[3]
 
 already_done = k_folds[0].keys()
 print(already_done)
