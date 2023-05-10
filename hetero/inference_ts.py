@@ -185,6 +185,7 @@ for d in dates:
     total_days = (today - start_date).days
 
     print("date", d)
+    d = 100000000
     edge_attr_before_scaled = torch.tensor([d, d])
     raw_attr = edge_attr_before_scaled[0]
     print("Raw attr: ", raw_attr)

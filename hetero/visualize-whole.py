@@ -284,7 +284,7 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
     # target_ticker-target_naics  congresperson 
     # add top_k edges for for target_naics for the edge type ('naics', 'classified', 'ticker')
     edge_types = [('ticker', 'classified', 'naics'), ('naics', 'rev_classified', 'ticker')]
-    top_k = 20 #At most 10 edges in the same industry
+    top_k = 1 #At most 10 edges in the same industry
     for edge_type in edge_types:
         edge_mask = edge_masks[edge_type]
 
@@ -320,10 +320,13 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
         # Find the indices related to the ticker nodes in the subgraph
         ticker_indices = [idx for (src, dst), idx in edge_index_dicts[edge_type].items() if (edge_type[0] == 'ticker' and integer_to_semantic_index['ticker'][src] in ticker_nodes) or (edge_type[2] == 'ticker' and integer_to_semantic_index['ticker'][dst] in ticker_nodes)]
 
+
         # Get the edge_mask values and edge_attr values for the ticker_indices
         ticker_edge_mask_values = edge_mask[ticker_indices]
+        print("num_bills_real: ",len(ticker_edge_mask_values))
 
         valid_date_indices = [idx for idx, (src, dst) in enumerate([(src, dst) for (src, dst), idx in edge_index_dicts[edge_type].items() if idx in ticker_indices]) if (days_since_2016_01_01(G[integer_to_semantic_index[edge_type[0]][src]][integer_to_semantic_index[edge_type[2]][dst]][edge_type]['start_date']) >= (reference_date - look_back)) & (days_since_2016_01_01(G[integer_to_semantic_index[edge_type[0]][src]][integer_to_semantic_index[edge_type[2]][dst]][edge_type]['start_date']) <= reference_date)]
+        print("num_bills: ", len(valid_date_indices))
 
         # Get the top_l indices for the valid date window
         top_l_indices = heapq.nlargest(top_l, valid_date_indices, ticker_edge_mask_values.take)
@@ -352,9 +355,15 @@ def get_thresholded_subgraph(G, node_masks, edge_masks, node_mask_threshold, edg
     valid_date_indices = bill_indices # it doesnt need to filter since bills are assinged to committee is specifiable.
 
     src_dst_pairs = [edge for edge, idx in edge_index_dicts[edge_type].items() if idx in valid_date_indices]
-    thresholded_edges.update([(integer_to_semantic_index[edge_type[0]][src], integer_to_semantic_index[edge_type[2]][dst], edge_type) for src, dst in src_dst_pairs])    
+    pass
+    # if len(src_dst_pairs) > 0:
+    #     thresholded_edges.update([(integer_to_semantic_index[edge_type[0]][src], integer_to_semantic_index[edge_type[2]][dst], edge_type) for src, dst in [src_dst_pairs[0]]])    
+    # else:
+    thresholded_edges.update([(integer_to_semantic_index[edge_type[0]][src], integer_to_semantic_index[edge_type[2]][dst], edge_type) for src, dst in src_dst_pairs  
+                              if len(integer_to_semantic_index[edge_type[2]][dst]) == 4
+                              ])    
 
-    print(f"Added edges for edge type {edge_type}: {[(integer_to_semantic_index[edge_type[0]][src], integer_to_semantic_index[edge_type[2]][dst], edge_type) for src, dst in src_dst_pairs]}")
+    # print(f"Added edges for edge type {edge_type}: {[(integer_to_semantic_index[edge_type[0]][src], integer_to_semantic_index[edge_type[2]][dst], edge_type) for src, dst in src_dst_pairs]}")
 
     # Find edges connecting the target congressperson and committees within the edge type ('congressperson', 'assignment', 'committee')
     edge_type = ('congressperson', 'assignment', 'committee')
@@ -546,9 +555,9 @@ shapes = {
 
 # read files in exp/trans_edge_not_included/results
 import os
-# folder_path = "exp/trans_edge_not_included/results_legacy"
+folder_path = "exp/trans_edge_not_included/results_legacy"
 # folder_path = "exp/trans_edge_not_included/results"
-folder_path = "exp/trans_edge_not_included/results_wyden_klac"
+# folder_path = "exp/trans_edge_not_included/results_wyden_klac"
 
 
 pkl_files = [f for f in os.listdir(folder_path) if f.endswith('.pkl')]
@@ -786,7 +795,7 @@ for pkl_file in pkl_files:
     # nodes_to_include = set().union(*connected_components)
     # subgraph = subgraph.subgraph(nodes_to_include)
 
-    title = f"Subgraph for {congressperson} and {ticker} on {ref_date_str}"
+    title = f"Subgraph for {congressperson} and {ticker}" # on {ref_date_str}"
     draw_subgraph(subgraph, node_colors, shapes, title=title, congressperson_label=congressperson, ticker_label=ticker)
     pass
 
