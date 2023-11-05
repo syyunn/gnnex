@@ -128,33 +128,27 @@ print(grouped_df)
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-# Set the plot style
-plt.style.use("seaborn-whitegrid")
-
 # Create a figure and axis
 fig, ax = plt.subplots()
 
-# Set the width of the bars
-bar_width = 0.15
-
-# Set the positions for the bars
+# Set the positions for the points
 positions = np.arange(len(grouped_df['edge_type'].unique()))
 
-# Loop through each score type and plot the bars with error bars
+# Loop through each score type and plot the error bars
 for i, score_type in enumerate(grouped_df['score_type'].unique()):
     # Filter the data for the current score type
     score_data = grouped_df[grouped_df['score_type'] == score_type]
     
-    # Plot the bars with error bars
-    ax.bar(positions + i * bar_width,
-           score_data['shapley_mean'],
-           yerr=score_data['shapley_std'],
-           width=bar_width,
-           label=score_type)
+    # Plot the error bars
+    ax.errorbar(positions + i * 0.1, # slightly offset x positions for clarity
+                score_data['shapley_mean'],
+                yerr=score_data['shapley_std'],
+                fmt='o', # 'o' for points
+                capsize=5, # size of the error bar caps
+                label=score_type)
 
 # Set the x-ticks and x-tick labels
-ax.set_xticks(positions + bar_width * (len(grouped_df['score_type'].unique()) - 1) / 2)
+ax.set_xticks(positions)
 ax.set_xticklabels(grouped_df['edge_type'].unique(), rotation=45, ha='right')
 
 # Set the labels and title
